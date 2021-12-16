@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from tensorflow.keras.datasets.mnist import load_data
@@ -32,7 +33,7 @@ class MNISTPuzzleDataset(Dataset):
 
         states = np.array(states)
         states = states.reshape((*states.shape, 1))
-        self.states = states
+        self.states = torch.DoubleTensor(states)
     
     def __len__(self):
         return self.n
@@ -48,5 +49,6 @@ def get_loader(
     usecuda: bool = False
 ) -> DataLoader:
     ds = MNISTPuzzleDataset(n=total_samples, differing_digits=differing_digits)
+    print(ds[0].dtype)
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda)
     return loader

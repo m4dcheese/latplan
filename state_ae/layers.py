@@ -21,6 +21,7 @@ class FullyConnectedBlock(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
     
     def forward(self, x: torch.Tensor):
+        print(x.dtype)
         x = self.linear(x)
         x = self.relu(x)
         x = self.batch_normalization(x)
