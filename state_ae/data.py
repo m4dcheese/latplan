@@ -47,7 +47,9 @@ def get_loader(
     total_samples: int = 1000,
     batch_size: int = 100,
     differing_digits: bool = False,
+    usecuda: bool = False
 ) -> DataLoader:
     ds = MNISTPuzzleDataset(n=total_samples, differing_digits=differing_digits)
-    loader = DataLoader(ds, batch_size=batch_size)
+    loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda)
+    print(ds[0].dtype)
     return loader
