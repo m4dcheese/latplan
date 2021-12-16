@@ -1,8 +1,6 @@
-from numpy.lib.npyio import load
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from tensorflow.keras.datasets.mnist import load_data
-from util import show_mnist_images
 
 class MNISTPuzzleDataset(Dataset):
 
@@ -51,5 +49,4 @@ def get_loader(
 ) -> DataLoader:
     ds = MNISTPuzzleDataset(n=total_samples, differing_digits=differing_digits)
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda)
-    print(ds[0].dtype)
     return loader

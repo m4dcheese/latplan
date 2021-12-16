@@ -9,7 +9,7 @@ class StateAE(nn.Module):
     def __init__(self, parameters, device):
         super().__init__()
         self.encoder = Encoder(parameters)
-        self.activation = BinaryConcrete(device=device)
+        self.activation = BinaryConcrete(device=device, total_epochs=parameters["epochs"])
         self.decoder = Decoder(parameters)
     
     def forward(self, x, epoch):

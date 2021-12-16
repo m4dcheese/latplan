@@ -1,7 +1,4 @@
 import torch
-import torch.nn as nn
-import numpy as np
-import itertools
 
 from data import get_loader
 from model import StateAE
@@ -33,16 +30,6 @@ def train():
         usecuda=usecuda
     )
 
-    # Run wandb (logs training)
-    # if not args['no_wandb']:
-    #     import wandb
-    #     run = wandb.init(project='latplan-pytorch',
-    #         group="%s" % (args['dataset']),
-    #         config={'dataset':args['dataset']},
-    #         reinit=True)
-    # else:
-    #     wandb = None
-    
     device = torch.device("cuda") if usecuda else torch.device("cpu")
     print("Using device", device)
 
@@ -71,52 +58,8 @@ def train():
         train_loss /= (len(loader) * parameters['batch_size'])
         print("epoch: {}, train loss = {:.6f}, ".format(epoch + 1, train_loss), end="")
 
-        # Validation - not used to impact model training, essentially working as a testing dataset
-        # with torch.no_grad():
-
-        #     model.eval()
-        #     val_loss = 0
-
-        #     for data in loaders['val']:
-
-        #         data = data.to(device)
-        #         out = model(data, epoch)
-        #         loss, _ = total_loss(out, p, args['beta_z'], args['beta_d'])
-        #         val_loss += loss.item()
-            
-        #     val_loss /= (len(loaders['val']) * args['batch'])
-        #     print("val loss = {:.6f}".format(val_loss))
-        
-        #     model.train()
-        
-        # Save results as gif
-    #     if (epoch + 1) % args['save_every'] == 0:
-            
-    #         pres_dec = out['x_dec_0'].to('cpu').numpy()
-    #         sucs_dec = out['x_dec_1'].to('cpu').numpy()
-    #         pres_aae = out['x_aae_3'].to('cpu').numpy()
-    #         sucs_aae = out['x_aae_2'].to('cpu').numpy()
-
-    #         dec_joint = np.concatenate((pres_dec, sucs_dec), axis=3)
-    #         aae_joint = np.concatenate((pres_aae, sucs_aae), axis=3)
-    #         joint = np.concatenate((dec_joint, aae_joint), axis=2)
-            
-    #         save_as_gif(joint, 'saved_gifs/' + str(args['beta_d']) + '_' + str(args['beta_z']) + '_' + str(args['fluents']) + '_' + str(epoch + 1) + '.gif')
-
-
-    #     # Log results in wandb
-    #     if wandb is not None:
-    #         wandb.log({"train-loss": train_loss, "val-loss": val_loss})
-
-    # if wandb is not None:
-    #     run.finish()
-    
-    return train_loss, val_loss, losses, parameters
-
+    return train_loss, losses
 
 
 if __name__=='__main__':
-
-    train_loss, val_loss, losses, parameters = train()
-    # save_loss_plots(losses, args['beta_d'], args['beta_z'], args['fluents'])
-    # print("Beta_d = %d, beta_z = %d, fluents = %d finished with train loss %.5f and val loss %.5f" % (args['beta_d'], args['beta_z'], args['fluents'], train_loss, val_loss))
+    train_loss, losses = train()
