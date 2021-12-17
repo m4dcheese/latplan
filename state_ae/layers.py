@@ -21,9 +21,23 @@ class FullyConnectedBlock(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
     
     def forward(self, x: torch.Tensor):
-        print(x.dtype)
         x = self.linear(x)
         x = self.relu(x)
         x = self.batch_normalization(x)
+        x = self.dropout(x)
+        return x
+
+
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, dropout):
+        super().__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=(3,3))
+        self.batch_normalization = nn.BatchNorm2d(num_features=out_channels)
+        self.dropout = nn.Dropout(p=dropout)
+    
+    def forward(self, x: torch.Tensor):
+        x = self.conv(x)
+        x = self.batch_normalization(x)
+        x = torch.tanh(x)
         x = self.dropout(x)
         return x

@@ -1,13 +1,14 @@
 parameters = {
-    "gaussian_noise": 0.1,
+    "gaussian_noise": .4,
     "fc_width": 100,
-    "dropout": .1,
-    "latent_size": 50,
+    "dropout": .4,
+    "latent_size": 36,
     "p": 0.5,
-    "total_samples": 1000,
-    "epochs": 10,
+    "total_samples": 10000,
+    "epochs": 200,
     "batch_size": 100,
-    "beta_z": 1,
+    "beta_z": .5,
     "no_cuda": False,
-    "differing_digits": False
+    "differing_digits": False,
+    "image_size": (84, 84)
 }

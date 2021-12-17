@@ -2,6 +2,9 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from tensorflow.keras.datasets.mnist import load_data
+import torchvision.transforms as T
+
+from parameters import parameters
 
 class MNISTPuzzleDataset(Dataset):
 
@@ -33,13 +36,18 @@ class MNISTPuzzleDataset(Dataset):
 
         states = np.array(states)
         states = states.reshape((*states.shape, 1))
-        self.states = torch.DoubleTensor(states)
+        self.states = states.astype(np.float32)
+        self.preprocessing = T.Compose([
+            T.ToPILImage(), 
+            T.Resize(parameters["image_size"]),
+            T.ToTensor()
+        ])
     
     def __len__(self):
-        return self.n
+        return len(self.states)
     
     def __getitem__(self, index) -> np.ndarray:
-        return self.states[index]
+        return self.preprocessing(self.states[index]).float()
 
 
 def get_loader(
@@ -49,6 +57,5 @@ def get_loader(
     usecuda: bool = False
 ) -> DataLoader:
     ds = MNISTPuzzleDataset(n=total_samples, differing_digits=differing_digits)
-    print(ds[0].dtype)
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda)
     return loader

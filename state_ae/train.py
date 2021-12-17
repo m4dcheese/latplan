@@ -56,10 +56,10 @@ def train():
             train_loss += loss.item()
 
         train_loss /= (len(loader) * parameters['batch_size'])
-        print("epoch: {}, train loss = {:.6f}, ".format(epoch + 1, train_loss), end="")
+        print(f"In epoch: {epoch + 1}, train loss = {train_loss:.6f}, ")
 
-    return train_loss, losses
+    return train_loss, losses, model
 
 
 if __name__=='__main__':
-    train_loss, losses = train()
+    train_loss, losses, model = train()

@@ -11,7 +11,7 @@ GumbelSoftmax and BinaryConcrete implementations inspired by https://github.com/
 
 
 # Calculates tau - formula provided in section 3.1.6 Gumbel Softmax
-def get_tau(epoch, t_max=5, t_min=0.5, total_epochs=1000):
+def get_tau(epoch, t_max=5, t_min=0.1, total_epochs=1000):
     return t_max * (t_min / t_max) ** (min(epoch, total_epochs) / total_epochs)
 
 
@@ -24,13 +24,17 @@ class GumbelSoftmax(nn.Module):
         self.device = device
         self.total_epochs = total_epochs
     
-    def forward(self, x, epoch, eps=1e-20):
+    def forward(self, x, epoch, eps=1e-10):
         # x: (batch, a)
         tau = get_tau(epoch, total_epochs=self.total_epochs)
         u = torch.rand(x.shape, device=self.device)
         gumbel = -torch.log(-torch.log(u + eps) + eps)
         logits = (x + gumbel) / tau
+        batch_size = x.shape[0]
+        num_of_variable_pairs = int(x.shape[-1] / 2)
+        logits = torch.reshape(logits, (batch_size, num_of_variable_pairs, 2))
         gumbel_softmax = F.softmax(logits, dim=-1)
+        gumbel_softmax = torch.reshape(gumbel_softmax, x.shape)
         return gumbel_softmax
 
 

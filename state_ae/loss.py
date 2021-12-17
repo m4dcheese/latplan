@@ -40,7 +40,7 @@ def bc_loss(logit_q, logit_p=None, p=None, eps=1e-20):
 def total_loss(out, p, beta_z, losses=None):
 
     # KL losses
-    z0_prior = bc_loss(out["encoded"], p=p)
+    # z0_prior = gs_loss(out["encoded"])
 
     # Reconstruction losses
     criterion = nn.MSELoss()
@@ -49,10 +49,10 @@ def total_loss(out, p, beta_z, losses=None):
 
     # Store losses for future plotting
     if losses is not None:
-        losses['z0_prior'].append(z0_prior.detach().cpu().numpy())
+        #losses['z0_prior'].append(z0_prior.detach().cpu().numpy())
         losses['x0_recon'].append(x0_recon.detach().cpu().numpy())
     
     # Follows formulas provided in paper
-    loss = beta_z * z0_prior + x0_recon
+    #loss = beta_z * z0_prior + x0_recon
 
-    return loss, losses
+    return x0_recon, losses
