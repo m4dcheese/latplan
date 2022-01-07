@@ -7,14 +7,11 @@ All loss functions found here
 '''
 
 # Gumbel Softmax loss - formula provided in section 3.1.6 Gumbel Softmax
-def gs_loss(logit_q, logit_p, eps=1e-20):
+def gs_loss(logit_q, eps=1e-20):
     q = F.softmax(logit_q, dim=-1)
     q = q / torch.sum(q, dim=-1, keepdim=True)
-    p = F.softmax(logit_p, dim=-1)
-    p = p / torch.sum(p, dim=-1, keepdim=True)
     log_q = torch.log(q + eps)
-    log_p = torch.log(p + eps)
-    loss = q * (log_q - log_p)
+    loss = q * (log_q)
     loss_sum = torch.sum(loss)
     return loss_sum
 
@@ -40,7 +37,7 @@ def bc_loss(logit_q, logit_p=None, p=None, eps=1e-20):
 def total_loss(out, p, beta_z, losses=None):
 
     # KL losses
-    # z0_prior = gs_loss(out["encoded"])
+    kl_loss = gs_loss(out["encoded"])
 
     # Reconstruction losses
     criterion = nn.MSELoss()
@@ -49,10 +46,10 @@ def total_loss(out, p, beta_z, losses=None):
 
     # Store losses for future plotting
     if losses is not None:
-        #losses['z0_prior'].append(z0_prior.detach().cpu().numpy())
+        losses['z0_prior'].append(kl_loss.detach().cpu().numpy())
         losses['x0_recon'].append(x0_recon.detach().cpu().numpy())
     
     # Follows formulas provided in paper
-    #loss = beta_z * z0_prior + x0_recon
+    loss = beta_z * kl_loss + x0_recon
 
     return x0_recon, losses

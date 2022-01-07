@@ -37,6 +37,7 @@ class Encoder(nn.Module):
         )
     
     def forward(self, x: torch.Tensor):
+        # TODO disable Gaussian Noise for eval mode
         x = self.gaussian_noise(x)
         x = self.conv_block_1(x)
         x = self.conv_block_2(x)

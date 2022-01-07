@@ -67,7 +67,7 @@ def write_slot_imgs(writer, epoch, recons):
 		fig, axs = plt.subplots(3, 4)
 		# fig, axs = plt.subplots(2, 2)
 		for i, ax in enumerate(axs.flat):
-			if i > 10:
+			if i >= len(recons):
 				break
 			img = slots[i].squeeze()
 			# unnormalize images
@@ -95,7 +95,7 @@ def write_mask_imgs(writer, epoch, masks):
 
 		fig, axs = plt.subplots(3, 4)
 		for i, ax in enumerate(axs.flat):
-			if i > 10:
+			if i >= len(masks):
 				break
 			img = mask[i].squeeze().numpy()
 			ax.imshow(img, cmap='gray')
@@ -118,10 +118,10 @@ def write_slots(writer, epoch, slots):
 
 		fig, axs = plt.subplots(3, 4)
 		for i, ax in enumerate(axs.flat):
-			if i > 10:
+			if i >= len(slots):
 				break
 			img = slots[i].squeeze()
-			img = torch.reshape(img, (8, 8))
+			img = torch.reshape(img, (int(len(img) / 8), 8))
 			ax.imshow(np.array(transforms.ToPILImage()(img).convert("L")), cmap='gray')
 			ax.imshow(img.numpy(), cmap='gray')
 			ax.set_title(f"Slot {i}")
