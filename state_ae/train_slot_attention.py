@@ -8,9 +8,9 @@ from torch.optim import lr_scheduler
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
 
-from state_ae.data import get_loader
-import state_ae.slot_attention_state_ae as model
-import slot_attention_obj_discovery.utils as utils
+from data import get_loader
+import slot_attention_state_ae as model
+import utils as utils
 from slot_attention_obj_discovery.rtpt import RTPT
 from parameters import parameters
 
