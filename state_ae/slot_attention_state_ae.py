@@ -149,7 +149,7 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.network = nn.Sequential(
             nn.Linear(hidden_channels, hidden_channels),
-            nn.ReLU(inplace=True),
+            nn.Sigmoid(),
             nn.Linear(hidden_channels, hidden_channels),
         )
 
@@ -259,9 +259,9 @@ class SlotAttention_model(nn.Module):
 
 
 if __name__ == "__main__":
-    net = SlotAttention_model(n_slots=11, n_iters=3, n_attr=18, in_channels=1,
-                              encoder_hidden_channels=64, attention_hidden_channels=128,
-                              decoder_hidden_channels=64, decoder_initial_size=(7, 7)).cuda()
+    net = SlotAttention_model(n_slots=10, n_iters=4, n_attr=12, in_channels=1,
+                              encoder_hidden_channels=42, attention_hidden_channels=84,
+                              decoder_hidden_channels=42, decoder_initial_size=(7, 7)).cuda()
     # net = net
     # output = net(x)
     # print(output.shape)

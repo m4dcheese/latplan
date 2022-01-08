@@ -7,7 +7,7 @@ import matplotlib
 from torch.optim import lr_scheduler
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
-
+print(torch.__version__)
 from data import get_loader
 import slot_attention_state_ae as model
 import utils as utils
@@ -81,10 +81,10 @@ def train():
 
     net = model.SlotAttention_model(n_slots=args.slots, n_iters=args.slot_iters, n_attr=args.slot_attr,
                                     in_channels=1,
-                                    encoder_hidden_channels=32, attention_hidden_channels=64,
-                                    decoder_hidden_channels=32, decoder_initial_size=(7, 7))
+                                    encoder_hidden_channels=64, attention_hidden_channels=128,
+                                    decoder_hidden_channels=64, decoder_initial_size=(7, 7))
 
-    net = torch.nn.DataParallel(net, device_ids=[0])
+    net = torch.nn.DataParallel(net, device_ids=[0,1,2])
     if args.resume:
         print("Loading ckpt ...")
         log = torch.load(args.resume)
@@ -101,7 +101,7 @@ def train():
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps, eta_min=0.00005)
 
     # Create RTPT object
-    rtpt = RTPT(name_initials='WS', experiment_name=f"Obj Discovery Slot Att",
+    rtpt = RTPT(name_initials='FM', experiment_name=f"MNIST Puzzle Slot Attn Reconstruction",
                 max_iterations=args.epochs)
 
     # store args as txt file
@@ -124,10 +124,8 @@ def train():
         torch.save(results, os.path.join("logs", args.name))
         if args.eval_only:
             break
-    
-    torch.save(net.state_dict())
-    
     return net
 
 if __name__ == "__main__":
     net = train()
+    torch.save(net.state_dict(), "/home/ml-fmetschies/thesis-latplan/saved")

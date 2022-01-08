@@ -36,7 +36,7 @@ def write_recon_imgs_plots(writer, epoch, recon, data):
 		img = recon[j].squeeze().detach().cpu()
 		# unnormalize images
 		img = img / 2. + 0.5  # Rescale to [0, 1].
-		ax.imshow(np.array(transforms.ToPILImage()(img).convert("RGB")))
+		ax.imshow(img.numpy(), cmap="gray")
 		# ax.imshow(img.numpy())
 		writer.add_figure(f"Sample_{j}/Recon", fig, epoch, close=True)
 		fig = plt.figure()
@@ -44,7 +44,7 @@ def write_recon_imgs_plots(writer, epoch, recon, data):
 		img = data[j].squeeze().detach().cpu()
 		# unnormalize images
 		img = img / 2. + 0.5  # Rescale to [0, 1].
-		ax.imshow(np.array(transforms.ToPILImage()(img).convert("RGB")))
+		ax.imshow(img.numpy(), cmap="gray") 
 		# ax.imshow(img.numpy())
 		writer.add_figure(f"Sample_{j}/Orig", fig, epoch, close=True)
 
@@ -67,12 +67,12 @@ def write_slot_imgs(writer, epoch, recons):
 		fig, axs = plt.subplots(3, 4)
 		# fig, axs = plt.subplots(2, 2)
 		for i, ax in enumerate(axs.flat):
-			if i >= len(recons):
+			if i >= 10:
 				break
 			img = slots[i].squeeze()
 			# unnormalize images
 			img = img / 2. + 0.5  # Rescale to [0, 1].
-			ax.imshow(np.array(transforms.ToPILImage()(img).convert("RGB")))
+			ax.imshow(img.numpy(), cmap="gray") 
 			# ax.imshow(img.numpy())
 			ax.set_title(f"Slot {i}")
 		writer.add_figure(f"Sample_{j}/Slot_Recons", fig, epoch, close=True)
@@ -95,7 +95,7 @@ def write_mask_imgs(writer, epoch, masks):
 
 		fig, axs = plt.subplots(3, 4)
 		for i, ax in enumerate(axs.flat):
-			if i >= len(masks):
+			if i >= 10:
 				break
 			img = mask[i].squeeze().numpy()
 			ax.imshow(img, cmap='gray')
@@ -118,7 +118,7 @@ def write_slots(writer, epoch, slots):
 
 		fig, axs = plt.subplots(3, 4)
 		for i, ax in enumerate(axs.flat):
-			if i >= len(slots):
+			if i >= 10:
 				break
 			img = slots[i].squeeze()
 			img = torch.reshape(img, (int(len(img) / 8), 8))
