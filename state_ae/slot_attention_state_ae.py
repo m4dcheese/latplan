@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 import numpy as np
 from torchsummary import summary
+from parameters import parameters
 
 
 def build_grid(resolution):
@@ -58,7 +59,7 @@ class SlotAttention(nn.Module):
 
         self.mlp = nn.Sequential(
             nn.Linear(dim, hidden_dim),
-            nn.ReLU(inplace=True),
+            nn.Sigmoid(),
             nn.Linear(hidden_dim, dim)
         )
 
@@ -109,13 +110,17 @@ class SlotAttention_encoder(nn.Module):
         super(SlotAttention_encoder, self).__init__()
         self.network = nn.Sequential(
             nn.Conv2d(in_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2),
+            nn.BatchNorm2d(num_features=hidden_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(hidden_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2),
+            nn.BatchNorm2d(num_features=hidden_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(hidden_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2),
-            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(num_features=hidden_channels),
+            nn.Tanh(),
             nn.Conv2d(hidden_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2),
-            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(num_features=hidden_channels),
+            nn.Tanh(),
         )
 
     def forward(self, x):
@@ -150,6 +155,7 @@ class MLP(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(hidden_channels, hidden_channels),
             nn.Sigmoid(),
+            nn.Dropout(p=parameters.dropout),
             nn.Linear(hidden_channels, hidden_channels),
         )
 
