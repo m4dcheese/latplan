@@ -36,6 +36,23 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
         recon_combined, recons, masks, slots = net.forward(imgs)
         loss = criterion(imgs, recon_combined)
 
+        recons_mean = torch.mean(recons, dim=1, keepdim=True)
+
+        # This is 0 if every slot produces same output --> unwanted
+        recons_mean_deviance = torch.abs(recons - recons_mean)
+
+        # Take the sum of pixel deviances
+        recons_mean_deviance_sum = recons_mean_deviance.sum()
+
+        # Normalize
+        recons_mean_deviance_norm = recons_mean_deviance_sum / recons.shape.numel()
+
+        # Make 0 the target:
+        recons_mean_deviance_loss = 1 - recons_mean_deviance_norm
+
+        # Compose total loss
+        total_loss = loss + args.mean_deviance_loss_factor * recons_mean_deviance_loss
+
         if train:
 
             if args.resume is None:
@@ -45,7 +62,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
                     optimizer.param_groups[0]["lr"] = learning_rate
 
             optimizer.zero_grad()
-            loss.backward()
+            total_loss.backward()
             optimizer.step()
 
             if i % 250 == 0:
@@ -55,8 +72,10 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
                 utils.write_slots(writer, i, slots)
                 # utils.write_attn(writer, i, net.slot_attention.attn)
 
-                writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
-                print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
+                writer.add_scalar("metric/reconstruction_loss", loss.item(), global_step=i)
+                writer.add_scalar("metric/mean_deviance_loss", recons_mean_deviance_loss.item(), global_step=i)
+                writer.add_scalar("metric/train_loss", total_loss.item(), global_step=i)
+                print(f"Epoch {epoch} Global Step {i} Train Loss: {total_loss.item():.6f}")
 
             cur_lr = optimizer.param_groups[0]["lr"]
             writer.add_scalar("lr", cur_lr, global_step=i)
