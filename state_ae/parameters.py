@@ -1,13 +1,14 @@
 from datetime import datetime
 
 
-class ClassFromDict():
-    def __init__(self, d: dict):
-        for k, v in d.items():
-            setattr(self, k, v)
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 
-parameters = ClassFromDict({
+parameters = dotdict({
     "name": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
     "gaussian_noise": .1,
     "fc_width": 1000,

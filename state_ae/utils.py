@@ -16,7 +16,7 @@ def save_args(args, writer):
 	"""
 	# store args as txt file
 	with open(os.path.join(writer.log_dir, 'args.txt'), 'w') as f:
-		for arg in vars(args):
+		for arg in args:
 			f.write(f"\n{arg}: {getattr(args, arg)}")
 
 
