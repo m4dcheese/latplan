@@ -48,10 +48,10 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
         recons_mean_deviance_norm = recons_mean_deviance_sum / recons.shape.numel()
 
         # Make 0 the target:
-        recons_mean_deviance_loss = 1 - recons_mean_deviance_norm
+        recons_mean_similarity = 1 - recons_mean_deviance_norm
 
         # Compose total loss
-        total_loss = loss + args.mean_deviance_loss_factor * recons_mean_deviance_loss
+        total_loss = loss + args.mean_similarity_loss_factor * recons_mean_similarity
 
         if train:
 
@@ -73,7 +73,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
                 # utils.write_attn(writer, i, net.slot_attention.attn)
 
                 writer.add_scalar("metric/reconstruction_loss", loss.item(), global_step=i)
-                writer.add_scalar("metric/mean_deviance_loss", recons_mean_deviance_loss.item(), global_step=i)
+                writer.add_scalar("metric/mean_deviance_loss", recons_mean_similarity.item(), global_step=i)
                 writer.add_scalar("metric/train_loss", total_loss.item(), global_step=i)
                 print(f"Epoch {epoch} Global Step {i} Train Loss: {total_loss.item():.6f}")
 

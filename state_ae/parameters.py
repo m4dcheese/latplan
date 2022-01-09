@@ -26,5 +26,5 @@ parameters = ClassFromDict({
     "slots": 10,
     "slot_iters": 3,
     "slot_attr": 18,
-    "mean_deviance_loss_factor": .2
+    "mean_similarity_loss_factor": .2
 })
