@@ -5,6 +5,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib
 from torch.optim import lr_scheduler
+
+from state_ae.activations import get_tau
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
 print(torch.__version__)
@@ -33,7 +35,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
         imgs = sample.to("cuda:0")
         
-        recon_combined, recons, masks, slots = net.forward(imgs)
+        recon_combined, recons, masks, slots = net.forward(imgs, epoch)
         loss = criterion(imgs, recon_combined)
 
         if train:
@@ -60,6 +62,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False,
 
             cur_lr = optimizer.param_groups[0]["lr"]
             writer.add_scalar("lr", cur_lr, global_step=i)
+            writer.add_scalar("tau", get_tau(epoch, total_epochs=parameters.epochs), global_step=i)
             if args.resume is None:
                 # normal lr scheduler
                 if i >= args.warm_up_steps:
@@ -79,12 +82,12 @@ def train():
 
     train_loader = get_loader(usecuda=True, batch_size=args.batch_size, total_samples=args.total_samples)
 
-    net = model.SlotAttention_model(n_slots=args.slots, n_iters=args.slot_iters, n_attr=args.slot_attr,
+    net = model.DiscreteSlotAttention_model(n_slots=args.slots, n_iters=args.slot_iters, n_attr=args.slot_attr,
                                     in_channels=1,
                                     encoder_hidden_channels=64, attention_hidden_channels=128,
                                     decoder_hidden_channels=64, decoder_initial_size=(7, 7))
 
-    net = torch.nn.DataParallel(net, device_ids=[0,1,2])
+    net = torch.nn.DataParallel(net, device_ids=[0])
     if args.resume:
         print("Loading ckpt ...")
         log = torch.load(args.resume)

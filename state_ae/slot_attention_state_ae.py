@@ -8,6 +8,8 @@ import torchvision.models as models
 import numpy as np
 from torchsummary import summary
 
+from state_ae.activations import GumbelSoftmax
+from parameters import parameters
 
 def build_grid(resolution):
     ranges = [np.linspace(0., 1., num=res) for res in resolution]
@@ -58,7 +60,7 @@ class SlotAttention(nn.Module):
 
         self.mlp = nn.Sequential(
             nn.Linear(dim, hidden_dim),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             nn.Linear(hidden_dim, dim)
         )
 
@@ -145,12 +147,12 @@ class SlotAttention_decoder(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, hidden_channels):
+    def __init__(self, hidden_channels, inner_hidden_channels=None):
         super(MLP, self).__init__()
         self.network = nn.Sequential(
-            nn.Linear(hidden_channels, hidden_channels),
-            nn.Sigmoid(),
-            nn.Linear(hidden_channels, hidden_channels),
+            nn.Linear(hidden_channels, inner_hidden_channels or hidden_channels),
+            nn.Tanh(),
+            nn.Linear(inner_hidden_channels or hidden_channels, hidden_channels),
         )
 
     def forward(self, x):
@@ -221,7 +223,7 @@ class SlotAttention_model(nn.Module):
                                                  hidden_channels=decoder_hidden_channels)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, img):
+    def forward(self, img, epoch=0):
         # `x` has shape: [batch_size, width, height, num_channels].
         # SLOT ATTENTION ENCODER
         x = self.encoder_cnn(img)
@@ -258,10 +260,93 @@ class SlotAttention_model(nn.Module):
         return recon_combined, recons, masks, slots
 
 
+class DiscreteSlotAttention_model(nn.Module):
+    def __init__(self, n_slots, n_iters, n_attr,
+                 in_channels=3,
+                 encoder_hidden_channels=64,
+                 attention_hidden_channels=128,
+                 decoder_hidden_channels=64,
+                 decoder_initial_size=(8, 8),
+                 discrete_variables=32,
+                 device="cuda"):
+        super(DiscreteSlotAttention_model, self).__init__()
+        self.n_slots = n_slots
+        self.n_iters = n_iters
+        self.n_attr = n_attr
+        self.n_attr = n_attr + 1  # additional slot to indicate if it is a object or empty slot
+        self.device = device
+        self.decoder_hidden_channels = decoder_hidden_channels
+        self.decoder_initial_size = decoder_initial_size
+
+        self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
+        self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, (84, 84), device=device)
+        self.layer_norm = nn.LayerNorm(encoder_hidden_channels, eps=1e-05)
+        self.mlp = MLP(hidden_channels=encoder_hidden_channels, inner_hidden_channels=attention_hidden_channels)
+        self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
+                                            hidden_dim=attention_hidden_channels)
+        self.mlp_to_gs = nn.Sequential(
+            nn.Linear(in_features=n_slots*encoder_hidden_channels, out_features=128),
+            nn.Tanh(),
+            nn.Linear(in_features=128, out_features=discrete_variables*2)
+        )
+        self.gs = GumbelSoftmax(self.device, total_epochs=parameters.epochs)
+        self.mlp_from_gs = nn.Sequential(
+            nn.Linear(in_features=discrete_variables*2, out_features=n_slots*encoder_hidden_channels),
+            nn.Tanh()
+        )
+        self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
+        self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
+                                                 hidden_channels=decoder_hidden_channels)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, img, epoch):
+        # `x` has shape: [batch_size, width, height, num_channels].
+        # SLOT ATTENTION ENCODER
+        x = self.encoder_cnn(img)
+        x = self.encoder_pos(x)
+        x = torch.flatten(x, start_dim=2)
+        # permute channel dimensions
+        x = x.permute(0, 2, 1)
+        x = self.layer_norm(x)
+        x = self.mlp(x)
+        slots = self.slot_attention(x)
+        # slots has shape: [batch_size, num_slots, slot_size].
+
+        # DISCRETIZATION
+        x = torch.flatten(slots, start_dim=1)
+        x = self.mlp_to_gs(x)
+        x = self.gs(x, epoch)
+        x = self.mlp_from_gs(x)
+        x = torch.reshape(x, slots.shape)
+
+        # SLOT ATTENTION DECODER
+        x = spatial_broadcast(slots, self.decoder_initial_size)
+        # `x` has shape: [batch_size*num_slots, width_init, height_init, slot_size].
+
+        # permute back to pytorch dimension representation
+        x = x.permute(0, 3, 1, 2)
+        # # `x` has shape: [batch_size*num_slots, slot_size, width_init, height_init].
+        x = self.decoder_pos(x)
+        x = self.decoder_cnn(x)
+        # # `x` has shape: [batch_size*num_slots, num_channels+1, width, height].
+
+        # Undo combination of slot and batch dimension; split alpha masks.
+        recons, masks = unstack_and_split(x, batch_size=img.shape[0], n_slots=self.n_slots, num_channels=1)
+        # `recons` has shape: [batch_size, num_slots, num_channels, width, height].
+        # `masks` has shape: [batch_size, num_slots, 1, width, height].
+
+        # Normalize alpha masks over slots.
+        masks = self.softmax(masks)
+        recon_combined = torch.sum(recons * masks, dim=1)  # Recombine image.
+        # `recon_combined` has shape: [batch_size, num_channels, width, height].
+
+        return recon_combined, recons, masks, slots
+
+
 if __name__ == "__main__":
-    net = SlotAttention_model(n_slots=10, n_iters=4, n_attr=12, in_channels=1,
-                              encoder_hidden_channels=42, attention_hidden_channels=84,
-                              decoder_hidden_channels=42, decoder_initial_size=(7, 7)).cuda()
+    net = DiscreteSlotAttention_model(n_slots=10, n_iters=4, n_attr=12, in_channels=1,
+                              encoder_hidden_channels=64, attention_hidden_channels=128,
+                              decoder_hidden_channels=64, decoder_initial_size=(7, 7)).cuda()
     # net = net
     # output = net(x)
     # print(output.shape)
