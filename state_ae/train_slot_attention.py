@@ -6,6 +6,7 @@ from tqdm import tqdm
 import matplotlib
 from torch.optim import lr_scheduler
 from state_ae.activations import get_tau
+from state_ae.loss import gs_loss
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
 print(torch.__version__)
@@ -27,8 +28,12 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
         imgs = sample.to(f"cuda:{args.device_ids[0]}")
         
-        recon_combined, recons, masks, slots = net.forward(imgs, epoch)
+        recon_combined, recons, masks, slots, logits = net.forward(imgs, epoch)
         loss = criterion(imgs, recon_combined)
+
+        loss_gs = gs_loss(logit_q=logits)
+
+        loss += args.beta_z * loss_gs
 
         if args.resume is None:
             # manual lr warmup
@@ -65,7 +70,8 @@ def train():
     train_loader = get_loader(
         usecuda=True,
         batch_size=args.batch_size,
-        total_samples=args.total_samples
+        total_samples=args.total_samples,
+        deletions=args.deletions
     )
 
     net = model.DiscreteSlotAttention_model(

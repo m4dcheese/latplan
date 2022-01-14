@@ -4,3 +4,4 @@
 **/logs
 **/runs
 env/
+testing_cluster.ipynb
