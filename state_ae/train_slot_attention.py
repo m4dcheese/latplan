@@ -5,7 +5,6 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib
 from torch.optim import lr_scheduler
-
 from state_ae.activations import get_tau
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
@@ -16,78 +15,71 @@ import utils as utils
 from slot_attention_obj_discovery.rtpt import RTPT
 from parameters import parameters
 
-from util import show_mnist_images
 
 torch.set_num_threads(30)
 
-def run(net, loader, optimizer, criterion, scheduler, writer, args, train=False, epoch=0):
-    if train:
-        net.train()
-        prefix = "train"
-        torch.set_grad_enabled(True)
-    else:
-        net.eval()
-        prefix = "test"
-        torch.set_grad_enabled(False)
+def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
+    net.train()
+    torch.set_grad_enabled(True)
 
     iters_per_epoch = len(loader)
 
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
-        imgs = sample.to("cuda:0")
+        imgs = sample.to(f"cuda:{args.device_ids[0]}")
         
         recon_combined, recons, masks, slots = net.forward(imgs, epoch)
         loss = criterion(imgs, recon_combined)
 
-        if train:
+        if args.resume is None:
+            # manual lr warmup
+            if i < args.warm_up_steps:
+                learning_rate = args.lr * (i+1)/args.warm_up_steps
+                optimizer.param_groups[0]["lr"] = learning_rate
 
-            if args.resume is None:
-                # manual lr warmup
-                if i < args.warm_up_steps:
-                    learning_rate = args.lr * (i+1)/args.warm_up_steps
-                    optimizer.param_groups[0]["lr"] = learning_rate
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        if i % 250 == 0:
+            utils.write_recon_imgs_plots(writer, i, recon_combined, imgs)
+            utils.write_slot_imgs(writer, i, recons)
+            utils.write_mask_imgs(writer, i, masks)
+            utils.write_slots(writer, i, slots)
 
-            if i % 250 == 0:
-                utils.write_recon_imgs_plots(writer, i, recon_combined, imgs)
-                utils.write_slot_imgs(writer, i, recons)
-                utils.write_mask_imgs(writer, i, masks)
-                utils.write_slots(writer, i, slots)
-                # utils.write_attn(writer, i, net.slot_attention.attn)
+            writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
+            print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
 
-                writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
-                print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
-
-            cur_lr = optimizer.param_groups[0]["lr"]
-            writer.add_scalar("lr", cur_lr, global_step=i)
-            writer.add_scalar("tau", get_tau(epoch, total_epochs=parameters.epochs), global_step=i)
-            if args.resume is None:
-                # normal lr scheduler
-                if i >= args.warm_up_steps:
-                    scheduler.step()
-        else:
-
-            if i % (iters_per_epoch * args.test_log) == 0:
-                utils.write_recon_imgs_plots(writer, epoch, recon_combined, imgs, i)
-
-            writer.add_scalar("metric/val_loss", loss.item(), global_step=i)
+        cur_lr = optimizer.param_groups[0]["lr"]
+        writer.add_scalar("hyper/lr", cur_lr, global_step=i)
+        writer.add_scalar("hyper/tau", get_tau(epoch, total_epochs=parameters.epochs), global_step=i)
+        if args.resume is None:
+            # normal lr scheduler
+            if i >= args.warm_up_steps:
+                scheduler.step()
 
 
 def train():
     args = parameters
     writer = SummaryWriter(f"runs/{args.name}", purge_step=0)
-    # writer = None
 
-    train_loader = get_loader(usecuda=True, batch_size=args.batch_size, total_samples=args.total_samples)
+    train_loader = get_loader(
+        usecuda=True,
+        batch_size=args.batch_size,
+        total_samples=args.total_samples
+    )
 
-    net = model.DiscreteSlotAttention_model(n_slots=args.slots, n_iters=args.slot_iters, n_attr=args.slot_attr,
-                                    in_channels=1,
-                                    encoder_hidden_channels=64, attention_hidden_channels=128,
-                                    decoder_hidden_channels=64, decoder_initial_size=(7, 7))
+    net = model.DiscreteSlotAttention_model(
+        n_slots=args.slots,
+        n_iters=args.slot_iters,
+        n_attr=args.slot_attr,
+        in_channels=1,
+        encoder_hidden_channels=args.encoder_hidden_channels,
+        attention_hidden_channels=args.attention_hidden_channels,
+        decoder_hidden_channels=args.decoder_hidden_channels,
+        decoder_initial_size=(7, 7)
+    )
 
-    net = torch.nn.DataParallel(net, device_ids=[0])
+    net = torch.nn.DataParallel(net, device_ids=args.device_ids)
     if args.resume:
         print("Loading ckpt ...")
         log = torch.load(args.resume)
@@ -96,7 +88,7 @@ def train():
 
 
     if not args.no_cuda:
-        net = net.to("cuda:0")
+        net = net.to(f"cuda:{args.device_ids[0]}")
 
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
     criterion = torch.nn.MSELoss()
@@ -114,8 +106,7 @@ def train():
     rtpt.start()
 
     for epoch in np.arange(args.epochs):
-        run(net, train_loader, optimizer, criterion, scheduler, writer, args,
-            train=True, epoch=epoch)
+        run(net, train_loader, optimizer, criterion, scheduler, writer, args, epoch=epoch)
         rtpt.step()
 
         results = {

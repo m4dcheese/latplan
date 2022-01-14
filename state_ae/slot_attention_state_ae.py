@@ -267,7 +267,6 @@ class DiscreteSlotAttention_model(nn.Module):
                  attention_hidden_channels=128,
                  decoder_hidden_channels=64,
                  decoder_initial_size=(8, 8),
-                 discrete_variables=32,
                  device="cuda"):
         super(DiscreteSlotAttention_model, self).__init__()
         self.n_slots = n_slots
@@ -279,44 +278,39 @@ class DiscreteSlotAttention_model(nn.Module):
         self.decoder_initial_size = decoder_initial_size
 
         self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
-        self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, (84, 84), device=device)
+        self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, parameters.image_size, device=device)
         self.layer_norm = nn.LayerNorm(encoder_hidden_channels, eps=1e-05)
         self.mlp = MLP(hidden_channels=encoder_hidden_channels, inner_hidden_channels=attention_hidden_channels)
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
-        self.mlp_to_gs = nn.Sequential(
-            nn.Linear(in_features=n_slots*encoder_hidden_channels, out_features=128),
-            nn.Tanh(),
-            nn.Linear(in_features=128, out_features=discrete_variables*2)
-        )
+        self.mlp_to_gs = nn.Linear(in_features=n_slots*encoder_hidden_channels, out_features=parameters.latent_size*2)
         self.gs = GumbelSoftmax(self.device, total_epochs=parameters.epochs)
-        self.mlp_from_gs = nn.Sequential(
-            nn.Linear(in_features=discrete_variables*2, out_features=n_slots*encoder_hidden_channels),
-            nn.Tanh()
-        )
+        self.mlp_from_gs = nn.Linear(in_features=parameters.latent_size*2, out_features=n_slots*encoder_hidden_channels)
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
         self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
                                                  hidden_channels=decoder_hidden_channels)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, img, epoch):
-        # `x` has shape: [batch_size, width, height, num_channels].
-        # SLOT ATTENTION ENCODER
-        x = self.encoder_cnn(img)
-        x = self.encoder_pos(x)
-        x = torch.flatten(x, start_dim=2)
-        # permute channel dimensions
-        x = x.permute(0, 2, 1)
-        x = self.layer_norm(x)
-        x = self.mlp(x)
-        slots = self.slot_attention(x)
-        # slots has shape: [batch_size, num_slots, slot_size].
+    def forward(self, img, epoch, discrete=None):
+        if discrete is None:
+            # `x` has shape: [batch_size, width, height, num_channels].
+            # SLOT ATTENTION ENCODER
+            x = self.encoder_cnn(img)
+            x = self.encoder_pos(x)
+            x = torch.flatten(x, start_dim=2)
+            # permute channel dimensions
+            x = x.permute(0, 2, 1)
+            x = self.layer_norm(x)
+            x = self.mlp(x)
+            slots = self.slot_attention(x)
+            # slots has shape: [batch_size, num_slots, slot_size].
 
-        # DISCRETIZATION
-        x = torch.flatten(slots, start_dim=1)
-        x = self.mlp_to_gs(x)
-        x = self.gs(x, epoch)
-        x = self.mlp_from_gs(x)
+            # DISCRETIZATION
+            x = torch.flatten(slots, start_dim=1)
+            x = self.mlp_to_gs(x)
+            discrete = self.gs(x, epoch)
+
+        x = self.mlp_from_gs(discrete)
         x = torch.reshape(x, slots.shape)
 
         # SLOT ATTENTION DECODER

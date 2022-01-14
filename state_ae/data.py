@@ -85,5 +85,5 @@ def get_loader(
             Whether or not to use cuda
     """
     ds = MNISTPuzzleDataset(n=total_samples, differing_digits=differing_digits, deletions=deletions)
-    loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda)
+    loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda, shuffle=True)
     return loader
