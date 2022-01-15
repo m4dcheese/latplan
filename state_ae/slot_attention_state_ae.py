@@ -211,9 +211,9 @@ class SlotAttention_model(nn.Module):
         self.decoder_initial_size = decoder_initial_size
 
         self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
-        self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, (84, 84), device=device)
+        self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, parameters.image_size, device=device)
         self.layer_norm = nn.LayerNorm(encoder_hidden_channels, eps=1e-05)
-        self.mlp = MLP(hidden_channels=encoder_hidden_channels)
+        self.mlp = MLP(hidden_channels=encoder_hidden_channels, inner_hidden_channels=attention_hidden_channels)
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
