@@ -128,6 +128,31 @@ def write_slots(writer, epoch, slots):
 		writer.add_figure(f"Sample_{j}/Slots", fig, epoch, close=True)
 
 
+def write_discrete(writer, epoch, slots):
+	"""
+	Add the individual slots to tensorboard writer.
+	:param writer:
+	:param epoch:
+	:param slots:
+	:return:
+	"""
+	# slots has shape: [batch_size, num_slots, slot_size].
+
+	for j in range(1):
+		slots = slots[j].squeeze().detach().cpu()
+
+		fig, axs = plt.subplots(3, 4)
+		for i, ax in enumerate(axs.flat):
+			if i >= 10:
+				break
+			img = slots.squeeze()
+			img = torch.reshape(img, (int(len(img) / 8), 8))
+			ax.imshow(np.array(transforms.ToPILImage()(img).convert("L")), cmap='gray')
+			ax.imshow(img.numpy(), cmap='gray')
+			ax.set_title(f"Slot {i}")
+		writer.add_figure(f"Sample_{j}/Discrete", fig, epoch, close=True)
+
+
 # def write_attn(writer, epoch, attn):
 # 	"""
 # 	Add the individual slots to tensorboard writer.

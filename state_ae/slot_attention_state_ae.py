@@ -280,8 +280,10 @@ class DiscreteSlotAttention_model(nn.Module):
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
         self.mlp_to_gs = nn.Linear(in_features=encoder_hidden_channels, out_features=parameters.latent_size*2)
+        nn.init.kaiming_uniform_(self.mlp_to_gs.weight)
         self.gs = GumbelSoftmax(self.device, total_epochs=parameters.epochs)
         self.mlp_from_gs = nn.Linear(in_features=parameters.latent_size*2, out_features=encoder_hidden_channels)
+        nn.init.kaiming_uniform_(self.mlp_from_gs.weight)
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
         self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
                                                  hidden_channels=decoder_hidden_channels)
@@ -301,10 +303,10 @@ class DiscreteSlotAttention_model(nn.Module):
         # slots has shape: [batch_size, num_slots, slot_size].
 
         # DISCRETIZATION
-        x = torch.reshape(slots, slots.shape[0] * slots.shape[1], slots.shape[2])
+        x = torch.reshape(slots, (slots.shape[0] * slots.shape[1], slots.shape[2]))
         # x has shape: [batch_size*num_slots, slot_size]
         logits = self.mlp_to_gs(x)
-        # logits has shape: [batch_size*num_slots, latent_size]
+        # logits has shape: [batch_size*num_slots, 2 * latent_size]
         if discrete is None:
             discrete = self.gs(logits, epoch)
 
@@ -334,7 +336,7 @@ class DiscreteSlotAttention_model(nn.Module):
         recon_combined = torch.sum(recons * masks, dim=1)  # Recombine image.
         # `recon_combined` has shape: [batch_size, num_channels, width, height].
 
-        return recon_combined, recons, masks, slots, logits
+        return recon_combined, recons, masks, slots, logits, discrete
 
 
 if __name__ == "__main__":

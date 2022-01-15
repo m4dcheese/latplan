@@ -28,12 +28,12 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
         imgs = sample.to(f"cuda:{args.device_ids[0]}")
         
-        recon_combined, recons, masks, slots, logits = net.forward(imgs, epoch)
+        recon_combined, recons, masks, slots, logits, discrete = net.forward(imgs, epoch)
         loss = criterion(imgs, recon_combined)
 
-        loss_gs = gs_loss(logit_q=logits)
+        # loss_gs = gs_loss(logit_q=logits)
 
-        loss += args.beta_z * loss_gs
+        # loss += args.beta_z * loss_gs
 
         if args.resume is None:
             # manual lr warmup
@@ -50,6 +50,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
             utils.write_slot_imgs(writer, i, recons)
             utils.write_mask_imgs(writer, i, masks)
             utils.write_slots(writer, i, slots)
+            utils.write_discrete(writer, i, discrete)
 
             writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
             print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
