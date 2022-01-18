@@ -125,7 +125,7 @@ class SlotAttention_encoder(nn.Module):
 
 
 class SlotAttention_decoder(nn.Module):
-    def __init__(self, in_channels, hidden_channels):
+    def __init__(self, in_channels, hidden_channels, out_channels):
         super(SlotAttention_decoder, self).__init__()
         self.network = nn.Sequential(
             # nn.ZeroPad2d((-1, -1, -1, -1)),
@@ -139,7 +139,7 @@ class SlotAttention_decoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(hidden_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2, output_padding=0),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(hidden_channels, 2, (3, 3), stride=(1, 1), padding=1),
+            nn.ConvTranspose2d(hidden_channels, out_channels, (3, 3), stride=(1, 1), padding=1),
         )
 
     def forward(self, x):
@@ -209,6 +209,7 @@ class SlotAttention_model(nn.Module):
         self.device = device
         self.decoder_hidden_channels = decoder_hidden_channels
         self.decoder_initial_size = decoder_initial_size
+        self.in_channels = in_channels
 
         self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
         self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, parameters.image_size, device=device)
@@ -218,7 +219,8 @@ class SlotAttention_model(nn.Module):
                                             hidden_dim=attention_hidden_channels)
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
         self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
-                                                 hidden_channels=decoder_hidden_channels)
+                                                 hidden_channels=decoder_hidden_channels,
+                                                 out_channels=self.in_channels + 1)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, img, epoch=0):
@@ -246,7 +248,7 @@ class SlotAttention_model(nn.Module):
         # # `x` has shape: [batch_size*num_slots, num_channels+1, width, height].
 
         # Undo combination of slot and batch dimension; split alpha masks.
-        recons, masks = unstack_and_split(x, batch_size=img.shape[0], n_slots=self.n_slots, num_channels=1)
+        recons, masks = unstack_and_split(x, batch_size=img.shape[0], n_slots=self.n_slots, num_channels=self.in_channels)
         # `recons` has shape: [batch_size, num_slots, num_channels, width, height].
         # `masks` has shape: [batch_size, num_slots, 1, width, height].
 
