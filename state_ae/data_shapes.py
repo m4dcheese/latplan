@@ -67,7 +67,7 @@ def generate_shapes(permutations: np.array, field_resolution: int = 28, field_pa
                 perm_row, perm_col = (permutation_value // size, permutation_value % size)
                 top_offset = row * field_resolution
                 left_offset = col * field_resolution
-
+                # shapes[perm_row] is one of the shape functions and adapts the image parameter in place
                 shapes[perm_row](image, top_offset, left_offset, field_resolution, field_padding, colors[perm_col])
         if blur != 0:
             image = cv.GaussianBlur(image, ksize=(5, 5), sigmaX=blur)

@@ -1,7 +1,9 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from parameters import parameters
 
 """
 COPIED FROM Ella Morgan's IMPLEMENTATION
@@ -12,7 +14,11 @@ GumbelSoftmax and BinaryConcrete implementations inspired by https://github.com/
 
 # Calculates tau - formula provided in section 3.1.6 Gumbel Softmax
 def get_tau(epoch, t_max=5, t_min=0.1, total_epochs=1000):
-    return t_max * (t_min / t_max) ** (min(epoch, total_epochs) / total_epochs)
+    iters_per_epoch = parameters.total_samples / parameters.batch_size
+    epoch_start_decrease = math.ceil(parameters.warm_up_steps / iters_per_epoch)
+    if epoch * iters_per_epoch < parameters.warm_up_steps:
+        return t_max
+    return t_max * (t_min / t_max) ** (min(epoch - epoch_start_decrease, total_epochs) / total_epochs)
 
 
 

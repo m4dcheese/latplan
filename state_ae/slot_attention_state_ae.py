@@ -60,7 +60,7 @@ class SlotAttention(nn.Module):
 
         self.mlp = nn.Sequential(
             nn.Linear(dim, hidden_dim),
-            nn.Tanh(),
+            nn.ReLU(inplace=True),
             nn.Linear(hidden_dim, dim)
         )
 
@@ -137,8 +137,6 @@ class SlotAttention_decoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(hidden_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2, output_padding=0),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(hidden_channels, hidden_channels, (5, 5), stride=(1, 1), padding=2, output_padding=0),
-            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(hidden_channels, out_channels, (3, 3), stride=(1, 1), padding=1),
         )
 
@@ -151,7 +149,7 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.network = nn.Sequential(
             nn.Linear(hidden_channels, inner_hidden_channels or hidden_channels),
-            nn.Tanh(),
+            nn.ReLU(inplace=True),
             nn.Linear(inner_hidden_channels or hidden_channels, hidden_channels),
         )
 
@@ -214,7 +212,7 @@ class SlotAttention_model(nn.Module):
         self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
         self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, parameters.image_size, device=device)
         self.layer_norm = nn.LayerNorm(encoder_hidden_channels, eps=1e-05)
-        self.mlp = MLP(hidden_channels=encoder_hidden_channels, inner_hidden_channels=attention_hidden_channels)
+        self.mlp = MLP(hidden_channels=encoder_hidden_channels)
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
