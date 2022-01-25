@@ -145,7 +145,7 @@ def write_discrete(writer, epoch, slots):
 		for i, ax in enumerate(axs.flat):
 			if i >= 10:
 				break
-			img = slots.squeeze()
+			img = slots[i]
 			img = torch.reshape(img, (int(len(img) / 8), 8))
 			ax.imshow(np.array(transforms.ToPILImage()(img).convert("L")), cmap='gray')
 			ax.imshow(img.numpy(), cmap='gray')

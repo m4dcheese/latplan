@@ -18,7 +18,7 @@ def get_tau(epoch, t_max=5, t_min=0.1, total_epochs=1000):
     epoch_start_decrease = math.ceil(parameters.warm_up_steps / iters_per_epoch)
     if epoch * iters_per_epoch < parameters.warm_up_steps:
         return t_max
-    return t_max * (t_min / t_max) ** (min(epoch - epoch_start_decrease, total_epochs) / total_epochs)
+    return t_max * (t_min / t_max) ** (min(epoch - epoch_start_decrease, (total_epochs - epoch_start_decrease)) / (total_epochs - epoch_start_decrease))
 
 
 

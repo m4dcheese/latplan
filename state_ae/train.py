@@ -11,6 +11,7 @@ from torchsummary import summary
 
 from state_ae.activations import get_tau
 from state_ae.util import save_images
+from state_ae.utils import save_args
 
 
 """
@@ -33,8 +34,8 @@ def train():
     usecuda = torch.cuda.is_available() and not parameters['no_cuda']
     loader = get_loader(
         dataset="color_shapes",
-        blur=.8,
-        deletions=0,
+        blur=parameters.blur,
+        deletions=parameters.deletions,
         total_samples=parameters["total_samples"],
         batch_size=parameters["batch_size"],
         usecuda=usecuda
@@ -50,11 +51,12 @@ def train():
     # Create model
     model = StateAE(parameters, device=device).to(device)
     print(summary(model, (3, 84, 84)))
-    optimizer = torch.optim.RAdam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimizer = torch.optim.RAdam(model.parameters(), lr=parameters.lr, weight_decay=1e-5)
     num_steps = len(loader) * parameters.epochs - parameters.warm_up_steps
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps, eta_min=0.00005)
 
     writer = SummaryWriter(f"runs/{parameters.name}", purge_step=0)
+    save_args(parameters, writer)
 
     model.train()
     torch.set_grad_enabled(True)
