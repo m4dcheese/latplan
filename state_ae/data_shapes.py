@@ -4,6 +4,9 @@ import numpy as np
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
+MAGENTA = (255, 0, 255)
+YELLOW = (255, 255, 0)
 
 def circle(
     img: np.array,
@@ -20,7 +23,7 @@ def circle(
     size = (int(field_resolution / 2) - field_padding, int(field_resolution / 2) - field_padding)
     cv.ellipse(img, center, size, angle=0, startAngle=0, endAngle=360, color=color, thickness=-1)
 
-def rectangle(
+def square(
     img: np.array,
     top_offset: int,
     left_offset: int,
@@ -30,6 +33,18 @@ def rectangle(
 ) -> None:
     top_left = (left_offset + field_padding, top_offset + field_padding)
     bottom_right = (left_offset + field_resolution - field_padding, top_offset + field_resolution - field_padding)
+    cv.rectangle(img, pt1=top_left, pt2=bottom_right, color=color, thickness=-1)
+
+def rectangle(
+    img: np.array,
+    top_offset: int,
+    left_offset: int,
+    field_resolution: int,
+    field_padding: int,
+    color: tuple
+) -> None:
+    top_left = (left_offset + field_padding, top_offset + field_padding + int((field_resolution - field_padding*2)/3))
+    bottom_right = (left_offset + field_resolution - field_padding, top_offset + field_resolution - field_padding - int((field_resolution - field_padding*2)/3))
     cv.rectangle(img, pt1=top_left, pt2=bottom_right, color=color, thickness=-1)
 
 def triangle(
@@ -47,7 +62,7 @@ def triangle(
     cv.fillPoly(img, pts=[pts], color=color)
 
 
-colors = (RED, GREEN, BLUE)
+colors = (CYAN, MAGENTA, YELLOW)
 shapes = (circle, rectangle, triangle)
 
 
