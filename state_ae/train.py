@@ -73,7 +73,7 @@ def train():
             data = data.to(device)
 
             out = model(data, epoch)
-            loss, losses = total_loss(out, p, parameters['beta_z'], losses)
+            loss, losses = total_loss(out, p, parameters['beta_kl'], parameters["beta_zs"], epoch=epoch)
 
             optimizer.zero_grad()
             loss.backward()
@@ -82,8 +82,9 @@ def train():
 
             if i % 250 == 0:
                 writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
-                writer.add_scalar("metric/kl_loss", losses["z0_prior"], global_step=i)
-                writer.add_scalar("metric/recon_loss", losses["x0_recon"], global_step=i)
+                writer.add_scalar("metric/kl_loss", losses["kl"], global_step=i)
+                writer.add_scalar("metric/zs_loss", losses["zs"], global_step=i)
+                writer.add_scalar("metric/recon_loss", losses["recon"], global_step=i)
                 print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
                 save_images(out=out, writer=writer, global_step=i)
 

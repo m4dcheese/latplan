@@ -11,7 +11,7 @@ class dotdict(dict):
 parameters = dotdict({
     # General
     "name": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
-    "epochs": 50,
+    "epochs": 100,
     "batch_size": 100,
     "no_cuda": False,
     "image_size": (84, 84),
@@ -21,18 +21,21 @@ parameters = dotdict({
 
     # Puzzle data
     "total_samples": 20000,
-    "deletions": 30000,
+    "deletions": 0,
     "differing_digits": False,
+    "blur": .8,
 
     # Discretization
-    "latent_size": 20,
-    "p": 0.5,
-    "beta_z": .0005,
+    "latent_size": 24,
+    "p": 0.1,
+    "beta_kl": 0.0005,
+    "beta_zs": 0.,
 
     # StateAE architecture
     "gaussian_noise": .4,
     "fc_width": 1000,
-    "dropout": .5,
+    "dropout": .4,
+    "encoder_channels": 16,
 
     # Slot Attention architecture
     "slots": 10,

@@ -31,3 +31,11 @@ def save_images(out, writer: SummaryWriter, global_step: int) -> None:
         axes = plt.axes()
         axes.imshow(torch.permute(images[key][0], (1,2,0)).cpu().detach().numpy())
         writer.add_figure(tag=f"Sample/{key}", figure=fig, global_step=global_step)
+    
+    # Special case: discrete tensor
+    discrete = out["discrete"][0].cpu().detach().numpy()
+    discrete = np.concatenate([discrete[::2], discrete[1::2]])
+    fig = plt.figure()
+    axes = plt.axes()
+    axes.imshow(discrete.reshape((discrete.shape[0] // 8, 8)), cmap="Greys")
+    writer.add_figure(tag=f"Sample/Discrete", figure=fig, global_step=global_step)

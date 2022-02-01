@@ -265,7 +265,8 @@ class DiscreteSlotAttention_model(nn.Module):
                  attention_hidden_channels=128,
                  decoder_hidden_channels=64,
                  decoder_initial_size=(8, 8),
-                 device="cuda"):
+                 device="cuda",
+                 discretize: bool = False):
         super(DiscreteSlotAttention_model, self).__init__()
         self.n_slots = n_slots
         self.n_iters = n_iters
@@ -273,6 +274,7 @@ class DiscreteSlotAttention_model(nn.Module):
         self.decoder_hidden_channels = decoder_hidden_channels
         self.decoder_initial_size = decoder_initial_size
         self.in_channels = in_channels
+        self.discretize = discretize
 
         self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
         self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, parameters.image_size, device=device)
@@ -280,9 +282,11 @@ class DiscreteSlotAttention_model(nn.Module):
         self.mlp = MLP(hidden_channels=encoder_hidden_channels)
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
-        self.mlp_to_gs = nn.Linear(in_features=encoder_hidden_channels, out_features=parameters.latent_size*2)
-        self.gs = GumbelSoftmax(self.device, total_epochs=parameters.epochs)
-        self.mlp_from_gs = nn.Linear(in_features=parameters.latent_size*2, out_features=encoder_hidden_channels)
+        self.discretization = nn.Sequential(
+            nn.Linear(in_features=encoder_hidden_channels, out_features=parameters.latent_size*2),
+            GumbelSoftmax(self.device, total_epochs=parameters.epochs),
+            nn.Linear(in_features=parameters.latent_size*2, out_features=encoder_hidden_channels)
+        )
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
         self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
                                                  hidden_channels=decoder_hidden_channels,
@@ -303,19 +307,22 @@ class DiscreteSlotAttention_model(nn.Module):
         # slots has shape: [batch_size, num_slots, slot_size].
 
         # DISCRETIZATION
-        x = torch.reshape(slots, (slots.shape[0] * slots.shape[1], slots.shape[2]))
-        # x has shape: [batch_size*num_slots, slot_size]
-        logits = self.mlp_to_gs(x)
-        # logits has shape: [batch_size*num_slots, 2 * latent_size]
-        if discrete is None:
-            discrete = self.gs(logits, epoch)
-        
-        discrete = torch.reshape(discrete, (slots.shape[0], slots.shape[1], 2 * parameters.latent_size))
+        if self.discretize:
+            x = torch.reshape(slots, (slots.shape[0] * slots.shape[1], slots.shape[2]))
+            # x has shape: [batch_size*num_slots, slot_size]
+            logits = self.mlp_to_gs(x)
+            # logits has shape: [batch_size*num_slots, 2 * latent_size]
+            if discrete is None:
+                discrete = self.gs(logits, epoch)
+            
+            discrete = torch.reshape(discrete, (slots.shape[0], slots.shape[1], 2 * parameters.latent_size))
 
-        x = self.mlp_from_gs(discrete)
-        # x has shape: [batch_size*num_slots, slot_size]
-        x = torch.reshape(x, slots.shape)
-        # x has shape: [batch_size, num_slots, slot_size]
+            x = self.mlp_from_gs(discrete)
+            # x has shape: [batch_size*num_slots, slot_size]
+            x = torch.reshape(x, slots.shape)
+            # x has shape: [batch_size, num_slots, slot_size]
+        else:
+            x = slots
 
         # SLOT ATTENTION DECODER
         x = spatial_broadcast(x, self.decoder_initial_size)
