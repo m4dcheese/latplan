@@ -24,11 +24,12 @@ parameters = dotdict({
     "deletions": 0,
     "differing_digits": False,
     "blur": .8,
+    "field_random_offset": 3,
 
     # Discretization
     "latent_size": 24,
     "p": 0.1,
-    "beta_kl": 0.0005,
+    "beta_kl": 0.,
     "beta_zs": 0.,
 
     # StateAE architecture

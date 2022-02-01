@@ -26,10 +26,10 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
     iters_per_epoch = len(loader)
 
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
-        imgs = sample.to(f"cuda:{args.device_ids[0]}")
+        imgs = sample[0].to(f"cuda:{args.device_ids[0]}"), sample[1].to(f"cuda:{args.device_ids[0]}")
         
-        recon_combined, recons, masks, slots, logits, discrete = net.forward(imgs, epoch)
-        loss = criterion(imgs, recon_combined)
+        recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
+        loss = criterion(imgs[1], recon_combined)
 
         # loss_gs = gs_loss(logit_q=logits)
 
@@ -46,14 +46,14 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
         optimizer.step()
 
         if i % 250 == 0:
-            imgs = torch.permute(imgs, (0,2,3,1))
-            recon_combined = torch.permute(recon_combined, (0,2,3,1))
+            imgs = imgs[0].permute((0,2,3,1))
+            recon_combined = recon_combined.permute((0,2,3,1))
             utils.write_recon_imgs_plots(writer, i, recon_combined, imgs)
-            recons = torch.permute(recons, (0,1,3,4,2))
+            recons = recons.permute((0,1,3,4,2))
             utils.write_slot_imgs(writer, i, recons)
             utils.write_mask_imgs(writer, i, masks)
             utils.write_slots(writer, i, slots)
-            utils.write_discrete(writer, i, discrete)
+            # utils.write_discrete(writer, i, discrete)
 
             writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
             print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")

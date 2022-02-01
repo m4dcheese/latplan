@@ -70,17 +70,19 @@ class MNISTPuzzleDataset(Dataset):
 
 
 class ColorShapesPuzzleDataset(Dataset):
-    def __init__(self, image_size: tuple, total_samples: int = 1000, deletions: int = 0, blur: float = 0.) -> None:
+    def __init__(self, image_size: tuple, total_samples: int = 1000, deletions: int = 0, blur: float = 0., field_random_offset: int = 0) -> None:
         super().__init__()
         self.n = total_samples
 
         # Generate logical puzzle permutations
         permutations = generate_permutations(n=total_samples, size=9, deletions=deletions, deleted_index=9)
 
-        states = generate_shapes(permutations=permutations, blur=blur)
+        states_input, states_target = generate_shapes(permutations=permutations, blur=blur, field_random_offset=field_random_offset)
 
-        states = np.array(states)
-        self.states = states.astype(np.uint8)
+        states_input = np.array(states_input)
+        self.states_input = states_input.astype(np.uint8)
+        states_target = np.array(states_target)
+        self.states_target = states_target.astype(np.uint8)
         self.preprocessing = T.Compose([
             T.ToPILImage(),
             T.Resize(image_size),
@@ -88,10 +90,13 @@ class ColorShapesPuzzleDataset(Dataset):
         ])
     
     def __len__(self):
-        return len(self.states)
+        return len(self.states_input)
     
     def __getitem__(self, index) -> np.ndarray:
-        return self.preprocessing(self.states[index]).float()
+        return (
+            self.preprocessing(self.states_input[index]).float(),
+            self.preprocessing(self.states_target[index]).float()
+        )
 
 
 def get_loader(
@@ -100,6 +105,7 @@ def get_loader(
     batch_size: int = 100,
     image_size: tuple = (84, 84),
     deletions: int = 0,
+    field_random_offset: int = 0,
     usecuda: bool = False,
     differing_digits: bool = False,
     blur: float = 0.
@@ -137,7 +143,8 @@ def get_loader(
             image_size=image_size,
             total_samples=total_samples,
             deletions=deletions,
-            blur=blur
+            blur=blur,
+            field_random_offset=field_random_offset
         )
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda, shuffle=True)
     return loader

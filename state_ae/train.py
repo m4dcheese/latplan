@@ -38,6 +38,7 @@ def train():
         deletions=parameters.deletions,
         total_samples=parameters["total_samples"],
         batch_size=parameters["batch_size"],
+        field_random_offset=parameters.field_random_offset,
         usecuda=usecuda
     )
 
@@ -70,10 +71,11 @@ def train():
             if i < parameters.warm_up_steps:
                 learning_rate = parameters.lr * (i+1)/parameters.warm_up_steps
                 optimizer.param_groups[0]["lr"] = learning_rate
-            data = data.to(device)
+            data[0] = data[0].to(device)
+            data[1] = data[1].to(device)
 
-            out = model(data, epoch)
-            loss, losses = total_loss(out, p, parameters['beta_kl'], parameters["beta_zs"], epoch=epoch)
+            out = model(data[0], epoch)
+            loss, losses = total_loss(out, data[1], p, parameters['beta_kl'], parameters["beta_zs"], epoch=epoch)
 
             optimizer.zero_grad()
             loss.backward()

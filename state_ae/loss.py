@@ -56,7 +56,7 @@ def zero_suppression_loss(logits: torch.Tensor):
 
 
 # Follows equations given in section 3.1.8 Loss Functions
-def total_loss(out, p, beta_kl, beta_zs, epoch):
+def total_loss(out, target, p, beta_kl, beta_zs, epoch):
 
     # KL losses
     kl_loss = gs_loss(out["encoded"], p=parameters.p)
@@ -69,7 +69,7 @@ def total_loss(out, p, beta_kl, beta_zs, epoch):
     # Reconstruction losses
     criterion = nn.MSELoss()
 
-    recon = criterion(out["input"], out["decoded"])
+    recon = criterion(out["decoded"], target)
 
     losses = {
         "kl": kl_loss.detach().cpu().numpy(),

@@ -345,7 +345,7 @@ class DiscreteSlotAttention_model(nn.Module):
         recon_combined = torch.sum(recons * masks, dim=1)  # Recombine image.
         # `recon_combined` has shape: [batch_size, num_channels, width, height].
 
-        return recon_combined, recons, masks, slots, logits, discrete
+        return recon_combined, recons, masks, slots#, logits, discrete
 
 
 if __name__ == "__main__":
