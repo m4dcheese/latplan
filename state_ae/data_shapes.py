@@ -66,7 +66,14 @@ colors = (CYAN, MAGENTA, YELLOW)
 shapes = (circle, rectangle, triangle)
 
 
-def generate_shapes(permutations: np.array, field_resolution: int = 28, field_padding: int = 5, field_random_offset: int = 0, blur: float = 0.):
+def generate_shapes(
+    permutations: np.array,
+    field_resolution: int = 28,
+    field_padding: int = 5,
+    field_random_offset: int = 0,
+    blur: float = 0.,
+    random_distribution: bool = False
+):
     shape_permutations_input = []
     shape_permutations_target = []
     size = int(np.sqrt(permutations.shape[1]))
@@ -77,20 +84,26 @@ def generate_shapes(permutations: np.array, field_resolution: int = 28, field_pa
         image_target = np.zeros((field_resolution * size, field_resolution * size, size))
         for row in range(size):
             for col in range(size):
-                permutation_index = row * size + col
-                permutation_value = p[permutation_index]
-                if (permutation_value >= permutations.shape[1]):
-                    # Deletion occured at this position
-                    continue
-                perm_row, perm_col = (permutation_value // size, permutation_value % size)
-                top_offset = row * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
-                left_offset = col * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
+                if random_distribution:
+                    top_offset = int(rng.uniform(low=0, high=(size - 1) * field_resolution))
+                    left_offset = int(rng.uniform(low=0, high=(size - 1) * field_resolution))
+                    perm_row, perm_col = row, col
+                else:
+                    permutation_index = row * size + col
+                    permutation_value = p[permutation_index]
+                    if (permutation_value >= permutations.shape[1]):
+                        # Deletion occured at this position
+                        continue
+                    perm_row, perm_col = (permutation_value // size, permutation_value % size)
+                    top_offset = row * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
+                    left_offset = col * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
                 # shapes[perm_row] is one of the shape functions and adapts the image parameter in place
                 shapes[perm_row](image_input, top_offset, left_offset, field_resolution, field_padding, colors[perm_col])
 
                 # Image target
-                top_offset = row * field_resolution
-                left_offset = col * field_resolution
+                if not random_distribution:
+                    top_offset = row * field_resolution
+                    left_offset = col * field_resolution
                 shapes[perm_row](image_target, top_offset, left_offset, field_resolution, field_padding, colors[perm_col])
         if blur != 0:
             image_input = cv.GaussianBlur(image_input, ksize=(5, 5), sigmaX=blur)

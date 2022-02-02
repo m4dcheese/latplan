@@ -73,11 +73,13 @@ def train():
 
     train_loader = get_loader(
         dataset="color_shapes",
-        blur=.8,
+        blur=args.blur,
         usecuda=True,
         batch_size=args.batch_size,
         total_samples=args.total_samples,
-        deletions=args.deletions
+        deletions=args.deletions,
+        field_random_offset=parameters.field_random_offset,
+        random_distribution=args.random_distribution
     )
 
     net = model.DiscreteSlotAttention_model(
@@ -97,6 +99,7 @@ def train():
         log = torch.load(args.resume)
         weights = log["weights"]
         net.load_state_dict(weights, strict=True)
+        print("Loaded weights from "+args.resume)
 
 
     if not args.no_cuda:

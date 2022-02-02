@@ -70,14 +70,27 @@ class MNISTPuzzleDataset(Dataset):
 
 
 class ColorShapesPuzzleDataset(Dataset):
-    def __init__(self, image_size: tuple, total_samples: int = 1000, deletions: int = 0, blur: float = 0., field_random_offset: int = 0) -> None:
+    def __init__(
+        self,
+        image_size: tuple,
+        total_samples: int = 1000,
+        deletions: int = 0,
+        blur: float = 0.,
+        field_random_offset: int = 0,
+        random_distribution: bool = False
+    ) -> None:
         super().__init__()
         self.n = total_samples
 
         # Generate logical puzzle permutations
         permutations = generate_permutations(n=total_samples, size=9, deletions=deletions, deleted_index=9)
 
-        states_input, states_target = generate_shapes(permutations=permutations, blur=blur, field_random_offset=field_random_offset)
+        states_input, states_target = generate_shapes(
+            permutations=permutations,
+            blur=blur,
+            field_random_offset=field_random_offset,
+            random_distribution=random_distribution
+        )
 
         states_input = np.array(states_input)
         self.states_input = states_input.astype(np.uint8)
@@ -108,7 +121,8 @@ def get_loader(
     field_random_offset: int = 0,
     usecuda: bool = False,
     differing_digits: bool = False,
-    blur: float = 0.
+    blur: float = 0.,
+    random_distribution: bool = False
 ) -> DataLoader:
     """
     Returns a loader for the MNISTPuzzleDataset
@@ -130,6 +144,8 @@ def get_loader(
             [mnist] Whether or not to use different digits for puzzle generation. Default: false
         blur:
             [color_shapes] Amount of blur (5x5 Gaussian Blur) to apply to shape puzzles
+        random_distribution:
+            [color_shapes] If true, randomly distributes tiles over image
     """
     if dataset == "mnist":
         ds = MNISTPuzzleDataset(
@@ -144,7 +160,8 @@ def get_loader(
             total_samples=total_samples,
             deletions=deletions,
             blur=blur,
-            field_random_offset=field_random_offset
+            field_random_offset=field_random_offset,
+            random_distribution=random_distribution
         )
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda, shuffle=True)
     return loader

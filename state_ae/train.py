@@ -39,6 +39,7 @@ def train():
         total_samples=parameters["total_samples"],
         batch_size=parameters["batch_size"],
         field_random_offset=parameters.field_random_offset,
+        random_distribution=False,
         usecuda=usecuda
     )
 
