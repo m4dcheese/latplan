@@ -50,26 +50,51 @@ def bc_loss(logit_q, logit_p=None, p=None, eps=1e-20):
 
 
 def zero_suppression_loss(logits: torch.Tensor):
-    first_rows = logits[:, ::2]
-    sum_rows = first_rows.sum()
-    return sum_rows / first_rows.numel()
+    return logits[:, ::2].mean()
+
+
+def beta_scheduler(step, plan="paper", **kwargs) -> float:
+    """
+    Returns the correct beta factor for the loss regularization term
+    Args:
+        step:
+            Current training step
+        total_steps:
+            Total training steps
+        plan:
+            One of ["paper",]. Scheduling plan to use
+    """
+    iters_per_epoch = int(parameters.total_samples / parameters.batch_size)
+    total_steps = parameters.epochs * iters_per_epoch
+    if plan == "paper":
+        return 0 if step < total_steps / 3 else parameters.beta
+    elif plan == "increase_after_warmup":
+        increase_end = int(kwargs["fraction_increase_end"] * total_steps)
+        increase_start = parameters.warm_up_steps
+        if step < increase_start:
+            return 0
+        elif step < increase_end:
+            return parameters.beta * (step - increase_start) / (increase_end - increase_start)
+        else:
+            return parameters.beta
 
 
 # Follows equations given in section 3.1.8 Loss Functions
-def total_loss(out, target, p, beta_kl, beta_zs, epoch):
-
-    # KL losses
-    kl_loss = gs_loss(out["encoded"], p=parameters.p)
-
-    zs_loss = zero_suppression_loss(out["discrete"])
-    if epoch < parameters.epochs / 4:
-        beta_kl = beta_zs * epoch * 4 / parameters.epochs
-        beta_zs = 0
+def total_loss(out, target, p, beta, epoch, step, writer):
 
     # Reconstruction losses
     criterion = nn.MSELoss()
 
     recon = criterion(out["decoded"], target)
+
+    # Regularization losses
+    kl_loss = gs_loss(out["encoded"], p=p)
+
+    zs_loss = zero_suppression_loss(out["discrete"])
+
+    beta = beta_scheduler(step)
+
+    writer.add_scalar("hyper/beta", beta, global_step=step)    
 
     losses = {
         "kl": kl_loss.detach().cpu().numpy(),
@@ -77,6 +102,6 @@ def total_loss(out, target, p, beta_kl, beta_zs, epoch):
         "recon": recon.detach().cpu().numpy(),
     }
     # Follows formulas provided in paper
-    loss = beta_kl * kl_loss + beta_zs * zs_loss + recon
+    loss = beta * zs_loss + recon
 
     return loss, losses

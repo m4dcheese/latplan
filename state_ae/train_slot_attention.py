@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -16,29 +17,36 @@ import utils as utils
 from slot_attention_obj_discovery.rtpt import RTPT
 from parameters import parameters
 
+def set_manual_seed(seed: int = 1):
+    """Set the seed for the PRNGs."""
+    os.environ['PYTHONASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.cuda.benchmark = True
+
 
 torch.set_num_threads(30)
 
-def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
+def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=0):
     net.train()
     torch.set_grad_enabled(True)
 
     iters_per_epoch = len(loader)
 
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
-        imgs = sample[0].to(f"cuda:{args.device_ids[0]}"), sample[1].to(f"cuda:{args.device_ids[0]}")
+        imgs = sample[0].to(f"cuda:{parameters.device_ids[0]}"), sample[1].to(f"cuda:{parameters.device_ids[0]}")
         
         recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
         loss = criterion(imgs[1], recon_combined)
 
-        # loss_gs = gs_loss(logit_q=logits)
-
-        # loss += args.beta_z * loss_gs
-
-        if args.resume is None:
+        if parameters.resume is None:
             # manual lr warmup
-            if i < args.warm_up_steps:
-                learning_rate = args.lr * (i+1)/args.warm_up_steps
+            if i < parameters.warm_up_steps:
+                learning_rate = parameters.lr * (i+1)/parameters.warm_up_steps
                 optimizer.param_groups[0]["lr"] = learning_rate
 
         optimizer.zero_grad()
@@ -61,77 +69,78 @@ def run(net, loader, optimizer, criterion, scheduler, writer, args, epoch=0):
         cur_lr = optimizer.param_groups[0]["lr"]
         writer.add_scalar("hyper/lr", cur_lr, global_step=i)
         writer.add_scalar("hyper/tau", get_tau(epoch, total_epochs=parameters.epochs), global_step=i)
-        if args.resume is None:
+        if parameters.resume is None:
             # normal lr scheduler
-            if i >= args.warm_up_steps:
+            if i >= parameters.warm_up_steps:
                 scheduler.step()
 
 
 def train():
-    args = parameters
-    writer = SummaryWriter(f"runs/{args.name}", purge_step=0)
+    writer = SummaryWriter(f"runs/{parameters.name}", purge_step=0)
+    if parameters.deterministic:
+        set_manual_seed(parameters.deterministic)
 
     train_loader = get_loader(
         dataset="color_shapes",
-        blur=args.blur,
+        blur=parameters.blur,
         usecuda=True,
-        batch_size=args.batch_size,
-        total_samples=args.total_samples,
-        deletions=args.deletions,
+        batch_size=parameters.batch_size,
+        total_samples=parameters.total_samples,
+        deletions=parameters.deletions,
         field_random_offset=parameters.field_random_offset,
-        random_distribution=args.random_distribution
+        random_distribution=parameters.random_distribution
     )
 
     net = model.DiscreteSlotAttention_model(
-        n_slots=args.slots,
-        n_iters=args.slot_iters,
-        n_attr=args.slot_attr,
+        n_slots=parameters.slots,
+        n_iters=parameters.slot_iters,
+        n_attr=parameters.slot_attr,
         in_channels=3,
-        encoder_hidden_channels=args.encoder_hidden_channels,
-        attention_hidden_channels=args.attention_hidden_channels,
-        decoder_hidden_channels=args.decoder_hidden_channels,
+        encoder_hidden_channels=parameters.encoder_hidden_channels,
+        attention_hidden_channels=parameters.attention_hidden_channels,
+        decoder_hidden_channels=parameters.decoder_hidden_channels,
         decoder_initial_size=(7, 7)
     )
 
-    net = torch.nn.DataParallel(net, device_ids=args.device_ids)
-    if args.resume:
+    net = torch.nn.DataParallel(net, device_ids=parameters.device_ids)
+    if parameters.resume:
         print("Loading ckpt ...")
-        log = torch.load(args.resume)
+        log = torch.load(parameters.resume)
         weights = log["weights"]
         net.load_state_dict(weights, strict=True)
-        print("Loaded weights from "+args.resume)
+        print("Loaded weights from "+parameters.resume)
 
 
-    if not args.no_cuda:
-        net = net.to(f"cuda:{args.device_ids[0]}")
+    if not parameters.no_cuda:
+        net = net.to(f"cuda:{parameters.device_ids[0]}")
 
-    optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(net.parameters(), lr=parameters.lr)
     criterion = torch.nn.MSELoss()
-    num_steps = len(train_loader) * args.epochs - args.warm_up_steps
+    num_steps = len(train_loader) * parameters.epochs - parameters.warm_up_steps
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps, eta_min=0.00005)
 
     # Create RTPT object
     rtpt = RTPT(name_initials='FM', experiment_name=f"MNIST Puzzle Slot Attn Reconstruction",
-                max_iterations=args.epochs)
+                max_iterations=parameters.epochs)
 
-    # store args as txt file
-    utils.save_args(args, writer)
+    # store parameters as txt file
+    utils.save_args(parameters, writer)
 
     # Start the RTPT tracking
     rtpt.start()
 
-    for epoch in np.arange(args.epochs):
-        run(net, train_loader, optimizer, criterion, scheduler, writer, args, epoch=epoch)
+    for epoch in np.arange(parameters.epochs):
+        run(net, train_loader, optimizer, criterion, scheduler, writer, parameters, epoch=epoch)
         rtpt.step()
 
         results = {
-            "name": args.name,
+            "name": parameters.name,
             "weights": net.state_dict(),
-            "args": vars(args),
+            "parameters": vars(parameters),
         }
-        print(os.path.join("logs", args.name))
-        torch.save(results, os.path.join("logs", args.name))
-        if args.eval_only:
+        print(os.path.join("logs", parameters.name))
+        torch.save(results, os.path.join("logs", parameters.name))
+        if parameters.eval_only:
             break
     return net
 
