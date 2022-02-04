@@ -8,7 +8,7 @@ import torchvision.models as models
 import numpy as np
 from torchsummary import summary
 
-from state_ae.activations import GumbelSoftmax
+from state_ae.activations import GumbelSoftmax, get_tau
 from parameters import parameters
 
 def build_grid(resolution):
@@ -341,7 +341,7 @@ class DiscreteSlotAttention_model(nn.Module):
         # `masks` has shape: [batch_size, num_slots, 1, width, height].
 
         # Normalize alpha masks over slots.
-        masks = self.softmax(masks)
+        masks = self.softmax(masks / get_tau(epoch=epoch, t_max=2, total_epochs=parameters.epochs))
         recon_combined = torch.sum(recons * masks, dim=1)  # Recombine image.
         # `recon_combined` has shape: [batch_size, num_channels, width, height].
 
