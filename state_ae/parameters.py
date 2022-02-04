@@ -46,6 +46,8 @@ parameters = dotdict({
     "encoder_hidden_channels": 64,
     "attention_hidden_channels": 128,
     "decoder_hidden_channels": 64,
+    "mask_temperature_max": 2,
+    "mask_temperature_min": .1
 })
 
 if type(parameters.warm_up_steps) == float:
