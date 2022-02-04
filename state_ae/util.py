@@ -1,3 +1,5 @@
+import os
+import random
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
@@ -20,10 +22,12 @@ def show_mnist_images(data: np.ndarray) -> None:
     
     plt.show()
 
+
 def save_images(out, writer: SummaryWriter, global_step: int) -> None:
     images = {
         "Orig": out["input"],
-        "Recon": out["decoded"]
+        "Recon": out["decoded"],
+        "Noisy_Input": out["noisy"]
     }
 
     for key in images:
@@ -39,3 +43,15 @@ def save_images(out, writer: SummaryWriter, global_step: int) -> None:
     axes = plt.axes()
     axes.imshow(discrete.reshape((discrete.shape[0] // 8, 8)), cmap="Greys")
     writer.add_figure(tag=f"Sample/Discrete", figure=fig, global_step=global_step)
+
+
+def set_manual_seed(seed: int = 1):
+    """Set the seed for the PRNGs."""
+    os.environ['PYTHONASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.cuda.benchmark = True

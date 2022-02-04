@@ -77,6 +77,7 @@ class ColorShapesPuzzleDataset(Dataset):
         deletions: int = 0,
         blur: float = 0.,
         field_random_offset: int = 0,
+        remove_target_offset: bool = False,
         random_distribution: bool = False
     ) -> None:
         super().__init__()
@@ -89,6 +90,7 @@ class ColorShapesPuzzleDataset(Dataset):
             permutations=permutations,
             blur=blur,
             field_random_offset=field_random_offset,
+            remove_target_offset=remove_target_offset,
             random_distribution=random_distribution
         )
 
@@ -122,6 +124,7 @@ def get_loader(
     usecuda: bool = False,
     differing_digits: bool = False,
     blur: float = 0.,
+    remove_target_offset: bool = False,
     random_distribution: bool = False
 ) -> DataLoader:
     """
@@ -144,6 +147,10 @@ def get_loader(
             [mnist] Whether or not to use different digits for puzzle generation. Default: false
         blur:
             [color_shapes] Amount of blur (5x5 Gaussian Blur) to apply to shape puzzles
+        field_random_offset:
+            [colot_shapes] If true, adds a random 2D offset to every tile
+        remove_target_offset:
+            [color_shapes] If true, removes random offset from target image
         random_distribution:
             [color_shapes] If true, randomly distributes tiles over image
     """
@@ -161,6 +168,7 @@ def get_loader(
             deletions=deletions,
             blur=blur,
             field_random_offset=field_random_offset,
+            remove_target_offset=remove_target_offset,
             random_distribution=random_distribution
         )
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda, shuffle=True)

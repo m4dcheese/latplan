@@ -62,12 +62,18 @@ def beta_scheduler(step, plan="paper", **kwargs) -> float:
         total_steps:
             Total training steps
         plan:
-            One of ["paper",]. Scheduling plan to use
+            One of ["paper", "increase", "increase_after_warmup"]. Scheduling plan to use
     """
     iters_per_epoch = int(parameters.total_samples / parameters.batch_size)
     total_steps = parameters.epochs * iters_per_epoch
     if plan == "paper":
         return 0 if step < total_steps / 3 else parameters.beta
+    elif plan == "increase":
+        increase_end = int(kwargs["fraction_increase_end"] * total_steps)
+        if step < increase_end:
+            return parameters.beta * step / increase_end
+        else:
+            return parameters.beta
     elif plan == "increase_after_warmup":
         increase_end = int(kwargs["fraction_increase_end"] * total_steps)
         increase_start = parameters.warm_up_steps

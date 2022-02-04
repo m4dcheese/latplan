@@ -25,7 +25,9 @@ parameters = dotdict({
     "deletions": 0,
     "differing_digits": False,
     "blur": .8,
+    "remove_target_offset": False,
     "field_random_offset": 0,
+    "random_distribution": False,
 
     # Discretization
     "latent_size": 24,

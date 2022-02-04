@@ -1,5 +1,4 @@
 import os
-import random
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -7,7 +6,6 @@ from tqdm import tqdm
 import matplotlib
 from torch.optim import lr_scheduler
 from state_ae.activations import get_tau
-from state_ae.loss import gs_loss
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
 print(torch.__version__)
@@ -16,18 +14,7 @@ import slot_attention_state_ae as model
 import utils as utils
 from slot_attention_obj_discovery.rtpt import RTPT
 from parameters import parameters
-
-def set_manual_seed(seed: int = 1):
-    """Set the seed for the PRNGs."""
-    os.environ['PYTHONASHSEED'] = str(seed)
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        torch.cuda.benchmark = True
-
+from util import set_manual_seed
 
 torch.set_num_threads(30)
 

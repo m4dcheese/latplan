@@ -72,6 +72,7 @@ def generate_shapes(
     field_padding: int = 5,
     field_random_offset: int = 0,
     blur: float = 0.,
+    remove_target_offset: bool = False,
     random_distribution: bool = False
 ):
     shape_permutations_input = []
@@ -101,7 +102,7 @@ def generate_shapes(
                 shapes[perm_row](image_input, top_offset, left_offset, field_resolution, field_padding, colors[perm_col])
 
                 # Image target
-                if not random_distribution:
+                if remove_target_offset and not random_distribution:
                     top_offset = row * field_resolution
                     left_offset = col * field_resolution
                 shapes[perm_row](image_target, top_offset, left_offset, field_resolution, field_padding, colors[perm_col])
