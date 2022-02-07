@@ -78,7 +78,7 @@ class SlotAttention(nn.Module):
         mu = self.slots_mu.expand(b, n_s, -1)
         log_sigma = self.slots_log_sigma.expand(b, n_s, -1)
         sigma = torch.exp(log_sigma)
-        slots = mu + sigma * torch.randn(b, n_s, self.dim)
+        slots = mu + sigma * torch.randn(b, n_s, self.dim, device=mu.device)
 
         inputs = self.norm_inputs(inputs)
         k, v = self.project_k(inputs), self.project_v(inputs)
