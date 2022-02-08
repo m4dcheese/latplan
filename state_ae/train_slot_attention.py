@@ -28,7 +28,14 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
         imgs = sample[0].to(f"cuda:{parameters.device_ids[0]}"), sample[1].to(f"cuda:{parameters.device_ids[0]}")
         
         recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
-        loss = criterion(imgs[1], recon_combined)
+
+        recon_loss = criterion(imgs[1], recon_combined)
+
+        # Add prior: Masks should distribute equally
+        regularization = torch.mean(masks - 1/parameters.slots, dim=[2,3]).square().mean()
+
+        loss = recon_loss + parameters.beta * regularization
+
 
         if parameters.resume is None:
             # manual lr warmup
@@ -51,6 +58,8 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
             # utils.write_discrete(writer, i, discrete)
 
             writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
+            writer.add_scalar("metric/recon_loss", recon_loss.item(), global_step=i)
+            writer.add_scalar("metric/reg_loss", regularization.item(), global_step=i)
             print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
 
         cur_lr = optimizer.param_groups[0]["lr"]
