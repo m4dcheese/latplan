@@ -29,13 +29,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
         
         recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
 
-        recon_loss = criterion(imgs[1], recon_combined)
-
-        # Add prior: Masks should distribute equally
-        regularization = torch.mean(masks - 1/parameters.slots, dim=[2,3]).square().mean()
-
-        loss = recon_loss + parameters.beta * regularization
-
+        loss = criterion(imgs[1], recon_combined)
 
         if parameters.resume is None:
             # manual lr warmup
@@ -58,8 +52,6 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
             # utils.write_discrete(writer, i, discrete)
 
             writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
-            writer.add_scalar("metric/recon_loss", recon_loss.item(), global_step=i)
-            writer.add_scalar("metric/reg_loss", regularization.item(), global_step=i)
             print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
 
         cur_lr = optimizer.param_groups[0]["lr"]
@@ -78,13 +70,11 @@ def train():
 
     train_loader = get_loader(
         dataset="color_shapes",
-        blur=parameters.blur,
         usecuda=True,
+        image_size=parameters.image_size,
         batch_size=parameters.batch_size,
         total_samples=parameters.total_samples,
         deletions=parameters.deletions,
-        field_random_offset=parameters.field_random_offset,
-        random_distribution=parameters.random_distribution
     )
 
     net = model.DiscreteSlotAttention_model(
@@ -95,7 +85,8 @@ def train():
         encoder_hidden_channels=parameters.encoder_hidden_channels,
         attention_hidden_channels=parameters.attention_hidden_channels,
         decoder_hidden_channels=parameters.decoder_hidden_channels,
-        decoder_initial_size=(7, 7)
+        decoder_initial_size=(8, 8),
+        discretize=False
     )
 
     net = torch.nn.DataParallel(net, device_ids=parameters.device_ids)
@@ -103,7 +94,7 @@ def train():
         print("Loading ckpt ...")
         log = torch.load(parameters.resume)
         weights = log["weights"]
-        net.load_state_dict(weights, strict=True)
+        net.load_state_dict(weights, strict=False)
         print("Loaded weights from "+parameters.resume)
 
 
