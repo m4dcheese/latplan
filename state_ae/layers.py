@@ -8,7 +8,7 @@ class GaussianNoise(nn.Module):
         self.stddev = stddev
     
     def forward(self, x: torch.Tensor):
-        return x + self.stddev * torch.rand_like(x)
+        return torch.clip(x + self.stddev**0.5 * torch.randn_like(x), 0, 1)
 
 
 class FullyConnectedBlock(nn.Module):

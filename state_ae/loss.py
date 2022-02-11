@@ -52,6 +52,10 @@ def bc_loss(logit_q, logit_p=None, p=None, eps=1e-20):
 def zero_suppression_loss(logits: torch.Tensor):
     return logits[:, ::2].mean()
 
+def asymmetric_zero_suppression_loss(logits: torch.Tensor):
+    weights = torch.FloatTensor(np.linspace(0, 2, logits[:, ::2].shape[-1])**2).to(logits.device)
+    weighted_logits = (logits[:, ::2].mean(dim=0)**.5) * weights
+    return weighted_logits.mean()
 
 def beta_scheduler(step, plan="paper", **kwargs) -> float:
     """
@@ -96,9 +100,11 @@ def total_loss(out, target, p, beta, epoch, step, writer):
     # Regularization losses
     kl_loss = gs_loss(out["encoded"], p=p)
 
-    zs_loss = zero_suppression_loss(out["discrete"])
+    zs_criterion = zero_suppression_loss if parameters.zero_supp_version == "paper" else asymmetric_zero_suppression_loss
 
-    beta = beta_scheduler(step)
+    zs_loss = zs_criterion(out["discrete"])
+
+    beta = beta_scheduler(step, plan=parameters.loss_beta_plan, **parameters.loss_kwargs)
 
     writer.add_scalar("hyper/beta", beta, global_step=step)    
 

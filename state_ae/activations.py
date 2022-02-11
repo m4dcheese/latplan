@@ -30,18 +30,24 @@ class GumbelSoftmax(nn.Module):
         self.device = device
         self.total_epochs = total_epochs
     
-    def forward(self, x, epoch, eps=1e-10):
+    def forward(self, x, epoch, hard: bool = False, eps=1e-10):
         # x: (batch, a)
-        tau = get_tau(epoch, total_epochs=self.total_epochs)
-        u = torch.rand(x.shape, device=self.device)
-        gumbel = -torch.log(-torch.log(u + eps) + eps)
-        logits = (x + gumbel) / tau
         batch_size = x.shape[0]
         num_of_variable_pairs = int(x.shape[-1] / 2)
-        logits = torch.reshape(logits, (batch_size, num_of_variable_pairs, 2))
-        gumbel_softmax = F.softmax(logits, dim=-1)
-        gumbel_softmax = torch.reshape(gumbel_softmax, x.shape)
-        return gumbel_softmax
+        pairs = torch.reshape(x, (batch_size, num_of_variable_pairs, 2))
+
+        if not hard:
+            tau = get_tau(epoch, total_epochs=self.total_epochs)
+            u = torch.rand(pairs.shape, device=self.device)
+            gumbel = -torch.log(-torch.log(u + eps) + eps)
+            logits = (pairs + gumbel) / tau
+            output = F.softmax(logits, dim=-1)
+        else:
+            max_idx = torch.argmax(pairs, dim=-1)
+            output = F.one_hot(max_idx).float()
+
+        output = torch.reshape(output, x.shape)
+        return output
 
 
 

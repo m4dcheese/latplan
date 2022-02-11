@@ -1,3 +1,5 @@
+from matplotlib import pyplot as plt
+import numpy as np
 import torch
 
 from data import get_loader
@@ -10,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
 from state_ae.activations import get_tau
+from state_ae.metrics import evaluate_sae
 from state_ae.util import save_images
 from state_ae.utils import save_args
 
@@ -34,25 +37,19 @@ def train():
     usecuda = torch.cuda.is_available() and not parameters['no_cuda']
     loader = get_loader(
         dataset="color_shapes",
-        blur=parameters.blur,
+        image_size=parameters.image_size,
+        differing_digits=parameters.differing_digits,
         deletions=parameters.deletions,
-        total_samples=parameters["total_samples"],
-        batch_size=parameters["batch_size"],
-        field_random_offset=parameters.field_random_offset,
-        random_distribution=False,
+        total_samples=parameters.total_samples,
+        batch_size=parameters.batch_size,
         usecuda=usecuda
     )
 
     device = torch.device("cuda") if usecuda else torch.device("cpu")
     print("Using device", device)
 
-    # Need to put this tensor on the device, done here instead of passing device
-    # TODO why does she do this?
-    p = torch.Tensor([parameters['p']]).to(device)
-
     # Create model
-    model = StateAE(parameters, device=device).to(device)
-    print(summary(model, (3, 84, 84)))
+    model = StateAE(device=device).to(device)
     optimizer = torch.optim.RAdam(model.parameters(), lr=parameters.lr, weight_decay=1e-5)
     num_steps = len(loader) * parameters.epochs - parameters.warm_up_steps
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps, eta_min=0.00005)
@@ -62,7 +59,6 @@ def train():
 
     model.train()
     torch.set_grad_enabled(True)
-    # Training loop
     for epoch in range(parameters['epochs']):
 
         train_loss = 0
@@ -90,6 +86,17 @@ def train():
                 writer.add_scalar("metric/recon_loss", losses["recon"], global_step=i)
                 print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
                 save_images(out=out, writer=writer, global_step=i)
+                with torch.no_grad():
+                    model.eval()
+                    metrics = evaluate_sae(model=model, usecuda=usecuda, samples=1000)
+                    writer.add_scalar("metric/bit_variance", metrics["bit_variance"], global_step=i)
+                    effective_bits = (metrics["discrete_usage"].cpu().detach().numpy() >= 1.).sum()
+                    writer.add_scalar("metric/effective_bits", effective_bits, global_step=i)
+                    fig = plt.figure()
+                    axes = plt.axes()
+                    axes.bar(np.arange(parameters.latent_size), metrics["discrete_usage"].cpu().detach().numpy())
+                    writer.add_figure(tag="Sample/discrete_usage", figure=fig, global_step=i)
+                    model.train()
 
             cur_lr = optimizer.param_groups[0]["lr"]
             writer.add_scalar("hyper/lr", cur_lr, global_step=i)

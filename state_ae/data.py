@@ -74,11 +74,7 @@ class ColorShapesPuzzleDataset(Dataset):
         self,
         image_size: tuple,
         total_samples: int = 1000,
-        deletions: int = 0,
-        blur: float = 0.,
-        field_random_offset: int = 0,
-        remove_target_offset: bool = False,
-        random_distribution: bool = False
+        deletions: int = 0
     ) -> None:
         super().__init__()
         self.n = total_samples
@@ -86,13 +82,7 @@ class ColorShapesPuzzleDataset(Dataset):
         # Generate logical puzzle permutations
         permutations = generate_permutations(n=total_samples, size=9, deletions=deletions, deleted_index=9)
 
-        states_input, states_target = generate_shapes(
-            permutations=permutations,
-            blur=blur,
-            field_random_offset=field_random_offset,
-            remove_target_offset=remove_target_offset,
-            random_distribution=random_distribution
-        )
+        states_input, states_target = generate_shapes(permutations=permutations)
 
         states_input = np.array(states_input)
         self.states_input = states_input.astype(np.uint8)
@@ -118,14 +108,10 @@ def get_loader(
     dataset: str = "mnist",
     total_samples: int = 1000,
     batch_size: int = 100,
-    image_size: tuple = (84, 84),
+    image_size: tuple = (64, 64),
     deletions: int = 0,
-    field_random_offset: int = 0,
     usecuda: bool = False,
     differing_digits: bool = False,
-    blur: float = 0.,
-    remove_target_offset: bool = False,
-    random_distribution: bool = False
 ) -> DataLoader:
     """
     Returns a loader for the MNISTPuzzleDataset
@@ -145,14 +131,6 @@ def get_loader(
             Whether or not to use cuda
         differing_digits:
             [mnist] Whether or not to use different digits for puzzle generation. Default: false
-        blur:
-            [color_shapes] Amount of blur (5x5 Gaussian Blur) to apply to shape puzzles
-        field_random_offset:
-            [colot_shapes] If true, adds a random 2D offset to every tile
-        remove_target_offset:
-            [color_shapes] If true, removes random offset from target image
-        random_distribution:
-            [color_shapes] If true, randomly distributes tiles over image
     """
     if dataset == "mnist":
         ds = MNISTPuzzleDataset(
@@ -166,10 +144,6 @@ def get_loader(
             image_size=image_size,
             total_samples=total_samples,
             deletions=deletions,
-            blur=blur,
-            field_random_offset=field_random_offset,
-            remove_target_offset=remove_target_offset,
-            random_distribution=random_distribution
         )
     loader = DataLoader(ds, batch_size=batch_size, pin_memory=usecuda, shuffle=True)
     return loader

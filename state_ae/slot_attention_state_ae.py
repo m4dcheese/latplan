@@ -10,6 +10,7 @@ from torchsummary import summary
 
 from state_ae.activations import GumbelSoftmax, get_tau
 from parameters import parameters
+from state_ae.layers import GaussianNoise
 
 def build_grid(resolution):
     ranges = [np.linspace(0., 1., num=res) for res in resolution]
@@ -133,7 +134,7 @@ class SlotAttention_decoder(nn.Module):
             # nn.ZeroPad2d((-1, -1, -1, -1)),
             nn.ConvTranspose2d(in_channels, hidden_channels, (5, 5), stride=(2, 2), padding=2, output_padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(hidden_channels, hidden_channels, (5, 5), stride=(3, 3), padding=2, output_padding=2),
+            nn.ConvTranspose2d(hidden_channels, hidden_channels, (5, 5), stride=(2, 2), padding=2, output_padding=1),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(hidden_channels, hidden_channels, (5, 5), stride=(2, 2), padding=2, output_padding=1),
             nn.ReLU(inplace=True),
@@ -278,17 +279,17 @@ class DiscreteSlotAttention_model(nn.Module):
         self.in_channels = in_channels
         self.discretize = discretize
 
+        self.gaussian_noise = GaussianNoise(stddev=parameters.gaussian_noise)
         self.encoder_cnn = SlotAttention_encoder(in_channels=in_channels, hidden_channels=encoder_hidden_channels)
         self.encoder_pos = SoftPositionEmbed(encoder_hidden_channels, parameters.image_size, device=device)
         self.layer_norm = nn.LayerNorm(encoder_hidden_channels, eps=1e-05)
         self.mlp = MLP(hidden_channels=encoder_hidden_channels)
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
-        self.discretization = nn.Sequential(
-            nn.Linear(in_features=encoder_hidden_channels, out_features=parameters.latent_size*2),
-            GumbelSoftmax(self.device, total_epochs=parameters.epochs),
-            nn.Linear(in_features=parameters.latent_size*2, out_features=encoder_hidden_channels)
-        )
+        self.mlp_to_gs = nn.Linear(in_features=encoder_hidden_channels, out_features=parameters.latent_size*2)
+        self.gs = GumbelSoftmax(self.device, total_epochs=parameters.epochs)
+        self.mlp_from_gs = nn.Linear(in_features=parameters.latent_size*2, out_features=encoder_hidden_channels)
+
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
         self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
                                                  hidden_channels=decoder_hidden_channels,
@@ -296,6 +297,7 @@ class DiscreteSlotAttention_model(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, img, epoch, discrete=None):
+        img = self.gaussian_noise(img)
         # `x` has shape: [batch_size, width, height, num_channels].
         # SLOT ATTENTION ENCODER
         x = self.encoder_cnn(img)

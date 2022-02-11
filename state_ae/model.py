@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from activations import GumbelSoftmax
+from parameters import parameters
+from state_ae.layers import GaussianNoise
 
 
 class Encoder(nn.Module):
@@ -79,23 +81,27 @@ class Decoder(nn.Module):
 
 
 class StateAE(nn.Module):
-    def __init__(self, parameters, device):
+    def __init__(self, device):
         super().__init__()
+        self.gaussian_noise = GaussianNoise(stddev=parameters.gaussian_noise)
         self.encoder = Encoder(
             hidden_channels=parameters.encoder_channels,
             latent_size=parameters.latent_size,
-            dropout=parameters.dropout
+            dropout=parameters.dropout,
+            image_size=parameters.image_size
         )
         self.activation = GumbelSoftmax(device=device, total_epochs=parameters["epochs"])
         self.decoder = Decoder(
             latent_size=parameters.latent_size,
             fc_width=parameters.fc_width,
-            dropout=parameters.dropout
+            dropout=parameters.dropout,
+            image_size=parameters.image_size
         )
     
     def forward(self, x, epoch=1):
         out = {"input": x}
-        out["encoded"] = self.encoder(out["input"])
-        out["discrete"] = self.activation(out["encoded"], epoch)
+        out["noisy"] = self.gaussian_noise(out["input"])
+        out["encoded"] = self.encoder(out["noisy"])
+        out["discrete"] = self.activation(out["encoded"], epoch, hard=not self.training)
         out["decoded"] = self.decoder(out["discrete"])
         return out
