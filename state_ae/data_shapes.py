@@ -124,7 +124,7 @@ def generate_shapes(
 
                 # Determine color
                 if random_colors:
-                    color_idx = rng.integers(low=0, high=9) & color_table_size
+                    color_idx = rng.integers(low=0, high=9) % color_table_size
                 else:
                     color_idx = (perm_row * size + perm_col) % color_table_size
 
