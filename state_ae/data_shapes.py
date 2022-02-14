@@ -84,7 +84,8 @@ def generate_shapes(
     remove_target_offset: bool = parameters.remove_target_offset,
     random_distribution_prob: float = parameters.random_distribution_prob,
     color_table_size: int = parameters.color_table_size,
-    background: int = parameters.background
+    background: int = parameters.background,
+    random_colors: bool = parameters.random_colors
 ):
     shape_permutations_input = []
     shape_permutations_target = []
@@ -121,6 +122,12 @@ def generate_shapes(
                     top_offset = row * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
                     left_offset = col * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
 
+                # Determine color
+                if random_colors:
+                    color_idx = rng.integers(low=0, high=9) & color_table_size
+                else:
+                    color_idx = (perm_row * size + perm_col) % color_table_size
+
                 # shapes[perm_row] is one of the shape functions and adapts the image parameter in place
                 shapes[perm_row](
                     image_input,
@@ -128,7 +135,7 @@ def generate_shapes(
                     left_offset,
                     field_resolution,
                     field_padding,
-                    colors[(perm_row * size + perm_col) % color_table_size]
+                    colors[color_idx]
                 )
 
                 # Image target
@@ -142,7 +149,7 @@ def generate_shapes(
                     left_offset,
                     field_resolution,
                     field_padding,
-                    colors[(perm_row * size + perm_col) % color_table_size]
+                    colors[color_idx]
                 )
         if blur != 0:
             image_input = cv.GaussianBlur(image_input, ksize=(5, 5), sigmaX=blur)

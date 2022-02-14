@@ -27,7 +27,10 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
     for i, sample in tqdm(enumerate(loader, start=epoch * iters_per_epoch)):
         imgs = sample[0].to(f"cuda:{parameters.device_ids[0]}"), sample[1].to(f"cuda:{parameters.device_ids[0]}")
         
-        recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
+        if net.module.discretize:
+            recon_combined, recons, masks, slots, logits, discrete = net.forward(imgs[0], epoch)
+        else:
+            recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
 
         loss = criterion(imgs[1], recon_combined)
 
@@ -49,7 +52,8 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
             utils.write_slot_imgs(writer, i, recons)
             utils.write_mask_imgs(writer, i, masks)
             utils.write_slots(writer, i, slots)
-            # utils.write_discrete(writer, i, discrete)
+            if net.module.discretize:
+                utils.write_discrete(writer, i, discrete)
 
             writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
             print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
@@ -63,7 +67,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
                 scheduler.step()
 
 
-def train():
+def train(net: torch.nn.Module = None):
     writer = SummaryWriter(f"runs/{parameters.name}", purge_step=0)
     if parameters.deterministic:
         set_manual_seed(parameters.deterministic)
@@ -77,25 +81,26 @@ def train():
         deletions=parameters.deletions,
     )
 
-    net = model.DiscreteSlotAttention_model(
-        n_slots=parameters.slots,
-        n_iters=parameters.slot_iters,
-        n_attr=parameters.slot_attr,
-        in_channels=3,
-        encoder_hidden_channels=parameters.encoder_hidden_channels,
-        attention_hidden_channels=parameters.attention_hidden_channels,
-        decoder_hidden_channels=parameters.decoder_hidden_channels,
-        decoder_initial_size=(8, 8),
-        discretize=False
-    )
+    if net is None:
+        net = model.DiscreteSlotAttention_model(
+            n_slots=parameters.slots,
+            n_iters=parameters.slot_iters,
+            n_attr=parameters.slot_attr,
+            in_channels=3,
+            encoder_hidden_channels=parameters.encoder_hidden_channels,
+            attention_hidden_channels=parameters.attention_hidden_channels,
+            decoder_hidden_channels=parameters.decoder_hidden_channels,
+            decoder_initial_size=(8, 8),
+            discretize=False
+        )
+        net = torch.nn.DataParallel(net, device_ids=parameters.device_ids)
 
-    net = torch.nn.DataParallel(net, device_ids=parameters.device_ids)
-    if parameters.resume:
-        print("Loading ckpt ...")
-        log = torch.load(parameters.resume)
-        weights = log["weights"]
-        net.load_state_dict(weights, strict=False)
-        print("Loaded weights from "+parameters.resume)
+        if parameters.resume:
+            print("Loading ckpt ...")
+            log = torch.load(parameters.resume)
+            weights = log["weights"]
+            net.load_state_dict(weights, strict=False)
+            print("Loaded weights from "+parameters.resume)
 
 
     if not parameters.no_cuda:

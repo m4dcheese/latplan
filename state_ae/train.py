@@ -90,7 +90,7 @@ def train():
                     model.eval()
                     metrics = evaluate_sae(model=model, usecuda=usecuda, samples=1000)
                     writer.add_scalar("metric/bit_variance", metrics["bit_variance"], global_step=i)
-                    effective_bits = (metrics["discrete_usage"].cpu().detach().numpy() >= 1.).sum()
+                    effective_bits = (metrics["discrete_usage"].cpu().detach().numpy() >= 1.).sum() / parameters.latent_size
                     writer.add_scalar("metric/effective_bits", effective_bits, global_step=i)
                     fig = plt.figure()
                     axes = plt.axes()
