@@ -103,6 +103,7 @@ def generate_shapes(
     for p in permutations:
         image_input = background + np.zeros((field_resolution * size, field_resolution * size, 3))
         image_target = background + np.zeros((field_resolution * size, field_resolution * size, 3))
+        color_random_indices = rng.permutation(np.arange(permutations.shape[1]))
         for row in range(size):
             for col in range(size):
                 if random_distribution_prob > 0 and random_distribution_prob < 1:
@@ -124,7 +125,7 @@ def generate_shapes(
 
                 # Determine color
                 if random_colors:
-                    color_idx = rng.integers(low=0, high=9) % color_table_size
+                    color_idx = color_random_indices[perm_row * size + perm_col] % color_table_size
                 else:
                     color_idx = (perm_row * size + perm_col) % color_table_size
 
