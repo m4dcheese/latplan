@@ -9,10 +9,11 @@ class dotdict(dict):
 
 
 parameters = dotdict({
+    "resume": "/home/madcheese/logs/2022-02-14_13:41:47",
     # General
     "name": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
-    "epochs": 200,
-    "batch_size": 100,
+    "epochs": 10,
+    "batch_size": 10,
     "no_cuda": False,
     "image_size": (64, 64),
     "warm_up_steps": .2, # Float for percentage of epochs
@@ -37,10 +38,10 @@ parameters = dotdict({
     "random_orientation": False,
 
     # Discretization
-    "latent_size": 100,
+    "latent_size": 16,
     "p": 0.1,
     "beta": 0.05,
-    "zero_supp_version": "asymmetric",
+    "zero_supp_version": "paper",
     "loss_beta_plan": "increase",
     "loss_kwargs": {"fraction_increase_end": 1/3},
 
@@ -51,7 +52,7 @@ parameters = dotdict({
 
     # Slot Attention architecture
     "slots": 10,
-    "slot_iters": 3,
+    "slot_iters": 4,
     "encoder_hidden_channels": 64,
     "attention_hidden_channels": 128,
     "decoder_hidden_channels": 64

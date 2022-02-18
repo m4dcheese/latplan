@@ -8,6 +8,19 @@ from train_slot_attention import train
 def transfer_learn():
     model = DiscreteSlotAttention_model(parameters.slots, parameters.slot_iters, 0)
 
+    # Compatability for loading weights (differing shapes cause unresolvable error)
+    model.mlp_to_gs = torch.nn.Sequential(
+        torch.nn.Linear(parameters.encoder_hidden_channels, parameters.fc_width),
+        torch.nn.Tanh(),
+        torch.nn.Linear(parameters.fc_width, 2*8),
+    ).to("cuda")
+
+    model.mlp_from_gs = torch.nn.Sequential(
+        torch.nn.Linear(2*8, parameters.fc_width),
+        torch.nn.Tanh(),
+        torch.nn.Linear(parameters.fc_width, parameters.encoder_hidden_channels)
+    ).to("cuda")
+
     model = torch.nn.DataParallel(model)
 
     log = torch.load(parameters.resume)
@@ -38,6 +51,8 @@ def transfer_learn():
     learnable_parameters = list(model.module.mlp_to_gs.parameters())
     learnable_parameters += list(model.module.gs.parameters())
     learnable_parameters += list(model.module.mlp_from_gs.parameters())
+    learnable_parameters += list(model.module.encoder_pos.parameters())
+    learnable_parameters += list(model.module.encoder_cnn.parameters())
 
     for param in learnable_parameters:
         param.requires_grad = True

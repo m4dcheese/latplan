@@ -52,7 +52,16 @@ def bc_loss(logit_q, logit_p=None, p=None, eps=1e-20):
 def zero_suppression_loss(logits: torch.Tensor):
     return logits[:, ::2].mean()
 
-def asymmetric_zero_suppression_loss(logits: torch.Tensor):
+def weighted_zero_suppression_loss(logits: torch.Tensor):
+    weights = torch.FloatTensor(np.linspace(0, 2, logits[:, ::2].shape[-1])**2).to(logits.device)
+    weighted_logits = logits[:, ::2] * weights
+    return weighted_logits.mean()
+
+def root_zero_suppression_loss(logits: torch.Tensor):
+    logits = (logits[:, ::2].mean(dim=0)**.5)
+    return logits.mean()
+
+def weighted_root_zero_suppression_loss(logits: torch.Tensor):
     weights = torch.FloatTensor(np.linspace(0, 2, logits[:, ::2].shape[-1])**2).to(logits.device)
     weighted_logits = (logits[:, ::2].mean(dim=0)**.5) * weights
     return weighted_logits.mean()
@@ -90,7 +99,7 @@ def beta_scheduler(step, plan="paper", **kwargs) -> float:
 
 
 # Follows equations given in section 3.1.8 Loss Functions
-def total_loss(out, target, p, beta, epoch, step, writer):
+def total_loss(out, target, p, beta, step, writer):
 
     # Reconstruction losses
     criterion = nn.MSELoss()
@@ -100,7 +109,13 @@ def total_loss(out, target, p, beta, epoch, step, writer):
     # Regularization losses
     kl_loss = gs_loss(out["encoded"], p=p)
 
-    zs_criterion = zero_suppression_loss if parameters.zero_supp_version == "paper" else asymmetric_zero_suppression_loss
+    zs_criteria_library = {
+        "paper": zero_suppression_loss,
+        "weighted": weighted_zero_suppression_loss,
+        "root": root_zero_suppression_loss,
+        "weighted_root": weighted_root_zero_suppression_loss
+    }
+    zs_criterion = zs_criteria_library[parameters.zero_supp_version]
 
     zs_loss = zs_criterion(out["discrete"])
 

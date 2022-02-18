@@ -72,7 +72,7 @@ def train():
             data[1] = data[1].to(device)
 
             out = model(data[0], epoch)
-            loss, losses = total_loss(out, data[1], parameters.p, parameters.beta, epoch=epoch, step=i, writer=writer)
+            loss, losses = total_loss(out, data[1], parameters.p, parameters.beta, step=i, writer=writer)
 
             optimizer.zero_grad()
             loss.backward()

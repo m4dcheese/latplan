@@ -6,6 +6,7 @@ from tqdm import tqdm
 import matplotlib
 from torch.optim import lr_scheduler
 from state_ae.activations import get_tau
+from state_ae.loss import total_loss
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter
 print(torch.__version__)
@@ -29,10 +30,18 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
         
         if net.module.discretize:
             recon_combined, recons, masks, slots, logits, discrete = net.forward(imgs[0], epoch)
+            out = {
+                "encoded": logits,
+                "discrete": discrete,
+                "decoded": recon_combined
+            }
+            loss, losses = total_loss(out, imgs[1], parameters.p, parameters.beta, step=i, writer=writer)
+            writer.add_scalar("metric/zs_loss", losses["zs"].item(), global_step=i)
+            writer.add_scalar("metric/recon_loss", losses["recon"].item(), global_step=i)
         else:
             recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
 
-        loss = criterion(imgs[1], recon_combined)
+            loss = criterion(imgs[1], recon_combined)
 
         if parameters.resume is None:
             # manual lr warmup
