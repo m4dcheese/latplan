@@ -49,11 +49,24 @@ def rectangle(
     field_padding: int,
     color: tuple
 ) -> None:
-    top_left = (left_offset + field_padding, top_offset + field_padding + int((field_resolution - field_padding*2)/3))
-    bottom_right = (
-        left_offset + field_resolution - field_padding,
-        top_offset + field_resolution - field_padding - int((field_resolution - field_padding*2)/3)
-    )
+    if parameters.random_orientation:
+        rotation = np.random.randint(0, 2)
+    else:
+        rotation = 0
+
+    if rotation == 0:
+        top_left = (left_offset + field_padding, top_offset + field_padding + int((field_resolution - field_padding*2)/3))
+        bottom_right = (
+            left_offset + field_resolution - field_padding,
+            top_offset + field_resolution - field_padding - int((field_resolution - field_padding*2)/3)
+        )
+    elif rotation == 1:
+        top_left = (left_offset + field_padding + int((field_resolution - field_padding*2)/3), top_offset + field_padding)
+        bottom_right = (
+            left_offset + field_resolution - field_padding - int((field_resolution - field_padding*2)/3),
+            top_offset + field_resolution - field_padding
+        )
+
     cv.rectangle(img, pt1=top_left, pt2=bottom_right, color=color, thickness=-1)
 
 def triangle(
@@ -64,9 +77,24 @@ def triangle(
     field_padding: int,
     color: tuple
 ) -> None:
-    bottom_left = (left_offset + field_padding, top_offset + field_resolution - field_padding)
-    bottom_right = (left_offset + field_resolution - field_padding, top_offset + field_resolution - field_padding)
-    center_top = (left_offset + int(field_resolution / 2), top_offset + field_padding)
+    if parameters.random_orientation:
+        rotation = np.random.randint(0, 3)
+    else:
+        rotation = 0
+
+    if rotation == 0:
+        bottom_left = (left_offset + field_padding, top_offset + field_resolution - field_padding)
+        bottom_right = (left_offset + field_resolution - field_padding, top_offset + field_resolution - field_padding)
+        center_top = (left_offset + int(field_resolution / 2), top_offset + field_padding)
+    elif rotation == 1: # +90 degrees
+        bottom_left = (left_offset + field_padding, top_offset + field_padding)
+        bottom_right = (left_offset + field_padding, top_offset + field_resolution - field_padding)
+        center_top = (left_offset + field_resolution - field_padding, top_offset + int(field_resolution / 2))
+    elif rotation == 2: # -90 degrees
+        bottom_left = (left_offset + field_resolution - field_padding, top_offset + field_resolution - field_padding)
+        bottom_right = (left_offset + field_resolution - field_padding, top_offset + field_padding)
+        center_top = (left_offset + field_padding, top_offset + int(field_resolution / 2))
+
     pts=np.array([bottom_left, bottom_right, center_top])
     cv.fillPoly(img, pts=[pts], color=color)
 

@@ -31,13 +31,15 @@ parameters = dotdict({
     "field_resolution": 24,
     "field_padding": .2, # Float for percentage of field_resolution
     "random_distribution_prob": 0,
-    "color_table_size": 9,
+    "color_table_size": 3,
     "background": 64,
+    "random_colors": False,
+    "random_orientation": False,
 
     # Discretization
     "latent_size": 100,
     "p": 0.1,
-    "beta": 0.01,
+    "beta": 0.05,
     "zero_supp_version": "asymmetric",
     "loss_beta_plan": "increase",
     "loss_kwargs": {"fraction_increase_end": 1/3},
