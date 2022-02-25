@@ -42,7 +42,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
 
             loss = criterion(imgs[1], recon_combined)
 
-        if parameters.resume is None:
+        if parameters.resume is None or True:
             # manual lr warmup
             if i < parameters.warm_up_steps:
                 learning_rate = parameters.lr * (i+1)/parameters.warm_up_steps
@@ -71,7 +71,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
         cur_lr = optimizer.param_groups[0]["lr"]
         writer.add_scalar("hyper/lr", cur_lr, global_step=i)
         writer.add_scalar("hyper/tau", get_tau(epoch, total_epochs=parameters.epochs), global_step=i)
-        if parameters.resume is None:
+        if parameters.resume is None or True:
             # normal lr scheduler
             if i >= parameters.warm_up_steps:
                 scheduler.step()

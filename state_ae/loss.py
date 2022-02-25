@@ -58,12 +58,12 @@ def weighted_zero_suppression_loss(logits: torch.Tensor):
     return weighted_logits.mean()
 
 def root_zero_suppression_loss(logits: torch.Tensor):
-    logits = (logits[:, ::2].mean(dim=0)**.5)
+    logits = ((logits[:, ::2].mean(dim=0) + 1e-8)**.5)
     return logits.mean()
 
 def weighted_root_zero_suppression_loss(logits: torch.Tensor):
     weights = torch.FloatTensor(np.linspace(0, 2, logits[:, ::2].shape[-1])**2).to(logits.device)
-    weighted_logits = (logits[:, ::2].mean(dim=0)**.5) * weights
+    weighted_logits = ((logits[:, ::2].mean(dim=0) + 1e-8)**.5) * weights
     return weighted_logits.mean()
 
 def fancy_func_zero_suppression_loss(logits: torch.Tensor):

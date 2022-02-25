@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
+import os
 
 from data import get_loader
 from model import StateAE
@@ -50,7 +51,7 @@ def train():
 
     # Create model
     model = StateAE(device=device).to(device)
-    optimizer = torch.optim.RAdam(model.parameters(), lr=parameters.lr, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=parameters.lr, weight_decay=1e-5)
     num_steps = len(loader) * parameters.epochs - parameters.warm_up_steps
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps, eta_min=0.00005)
 
@@ -104,6 +105,13 @@ def train():
             
             if i >= parameters.warm_up_steps:
                 scheduler.step()
+        results = {
+            "name": parameters.name,
+            "weights": model.state_dict(),
+            "parameters": vars(parameters),
+        }
+        print(os.path.join("logs", parameters.name))
+        torch.save(results, os.path.join("logs", parameters.name))
 
     return train_loss, losses, model
 

@@ -33,7 +33,7 @@ def save_images(out, writer: SummaryWriter, global_step: int) -> None:
     for key in images:
         fig = plt.figure()
         axes = plt.axes()
-        axes.imshow(torch.permute(images[key][0], (1,2,0)).cpu().detach().numpy())
+        axes.imshow(images[key][0].permute((1,2,0)).cpu().detach().numpy())
         writer.add_figure(tag=f"Sample/{key}", figure=fig, global_step=global_step)
     
     # Special case: discrete tensor
