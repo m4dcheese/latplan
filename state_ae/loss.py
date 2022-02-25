@@ -66,6 +66,11 @@ def weighted_root_zero_suppression_loss(logits: torch.Tensor):
     weighted_logits = (logits[:, ::2].mean(dim=0)**.5) * weights
     return weighted_logits.mean()
 
+def fancy_func_zero_suppression_loss(logits: torch.Tensor):
+    variable_means = logits[:, ::2].mean(dim=0)
+    logits = variable_means**.5 * (variable_means - .5)**2 + .5 * variable_means
+    return logits.mean()
+
 def beta_scheduler(step, plan="paper", **kwargs) -> float:
     """
     Returns the correct beta factor for the loss regularization term
@@ -113,7 +118,8 @@ def total_loss(out, target, p, beta, step, writer):
         "paper": zero_suppression_loss,
         "weighted": weighted_zero_suppression_loss,
         "root": root_zero_suppression_loss,
-        "weighted_root": weighted_root_zero_suppression_loss
+        "weighted_root": weighted_root_zero_suppression_loss,
+        "fancy": fancy_func_zero_suppression_loss
     }
     zs_criterion = zs_criteria_library[parameters.zero_supp_version]
 

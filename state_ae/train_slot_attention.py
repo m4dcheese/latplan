@@ -30,14 +30,13 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
         
         if net.module.discretize:
             recon_combined, recons, masks, slots, logits, discrete = net.forward(imgs[0], epoch)
+            discrete_batch = torch.reshape(discrete, (discrete.shape[0] * discrete.shape[1], discrete.shape[2]))
             out = {
                 "encoded": logits,
-                "discrete": discrete,
+                "discrete": discrete_batch,
                 "decoded": recon_combined
             }
             loss, losses = total_loss(out, imgs[1], parameters.p, parameters.beta, step=i, writer=writer)
-            writer.add_scalar("metric/zs_loss", losses["zs"].item(), global_step=i)
-            writer.add_scalar("metric/recon_loss", losses["recon"].item(), global_step=i)
         else:
             recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
 
@@ -63,6 +62,8 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
             utils.write_slots(writer, i, slots)
             if net.module.discretize:
                 utils.write_discrete(writer, i, discrete)
+                writer.add_scalar("metric/zs_loss", losses["zs"].item(), global_step=i)
+                writer.add_scalar("metric/recon_loss", losses["recon"].item(), global_step=i)
 
             writer.add_scalar("metric/train_loss", loss.item(), global_step=i)
             print(f"Epoch {epoch} Global Step {i} Train Loss: {loss.item():.6f}")
