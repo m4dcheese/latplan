@@ -286,9 +286,27 @@ class DiscreteSlotAttention_model(nn.Module):
         self.mlp = MLP(hidden_channels=encoder_hidden_channels)
         self.slot_attention = SlotAttention(num_slots=n_slots, dim=encoder_hidden_channels, iters=n_iters, eps=1e-8,
                                             hidden_dim=attention_hidden_channels)
-        self.mlp_to_gs = nn.Linear(in_features=encoder_hidden_channels, out_features=parameters.latent_size*2)
+
+        # Calculate slot sizes depending on discretization approach
+        if parameters.discrete_per_slot:
+            raw_size = encoder_hidden_channels
+            discrete_size = int(parameters.latent_size * 2 / parameters.slots)
+        else:
+            raw_size = encoder_hidden_channels * parameters.slots
+            discrete_size = parameters.latent_size * 2
+
+        self.mlp_to_gs = torch.nn.Sequential(
+            torch.nn.Linear(raw_size, parameters.fc_width),
+            torch.nn.Tanh(),
+            torch.nn.Linear(parameters.fc_width, discrete_size),
+        )
+        self.mlp_from_gs = torch.nn.Sequential(
+            torch.nn.Linear(discrete_size, parameters.fc_width),
+            torch.nn.Tanh(),
+            torch.nn.Linear(parameters.fc_width, raw_size)
+        )
+
         self.gs = GumbelSoftmax(self.device, total_epochs=parameters.epochs)
-        self.mlp_from_gs = nn.Linear(in_features=parameters.latent_size*2, out_features=encoder_hidden_channels)
 
         self.decoder_pos = SoftPositionEmbed(decoder_hidden_channels, decoder_initial_size, device=device)
         self.decoder_cnn = SlotAttention_decoder(in_channels=decoder_hidden_channels,
@@ -312,14 +330,17 @@ class DiscreteSlotAttention_model(nn.Module):
 
         # DISCRETIZATION
         if self.discretize:
-            x = torch.reshape(slots, (slots.shape[0] * slots.shape[1], slots.shape[2]))
-            # x has shape: [batch_size*num_slots, slot_size]
+            if parameters.discrete_per_slot:
+                x = torch.reshape(slots, (slots.shape[0] * slots.shape[1], slots.shape[2]))
+                # x has shape: [batch_size*num_slots, slot_size]
+            else:
+                x = torch.reshape(slots, (slots.shape[0], slots.shape[1] * slots.shape[2]))
+                # x has shape: [batch_size, num_slots * slot_size]
             logits = self.mlp_to_gs(x)
             # logits has shape: [batch_size*num_slots, 2 * latent_size]
+
             if discrete is None:
                 discrete = self.gs(logits, epoch)
-            
-            discrete = torch.reshape(discrete, (slots.shape[0], slots.shape[1], 2 * parameters.latent_size))
 
             x = self.mlp_from_gs(discrete)
             # x has shape: [batch_size*num_slots, slot_size]

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 import matplotlib
+import matplotlib.pyplot as plt
 from torch.optim import lr_scheduler
 from state_ae.activations import get_tau
 from state_ae.loss import total_loss
@@ -30,10 +31,9 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
         
         if net.module.discretize:
             recon_combined, recons, masks, slots, logits, discrete = net.forward(imgs[0], epoch)
-            discrete_batch = torch.reshape(discrete, (discrete.shape[0] * discrete.shape[1], discrete.shape[2]))
             out = {
                 "encoded": logits,
-                "discrete": discrete_batch,
+                "discrete": discrete,
                 "decoded": recon_combined
             }
             loss, losses = total_loss(out, imgs[1], parameters.p, parameters.beta, step=i, writer=writer)
@@ -61,7 +61,16 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
             utils.write_mask_imgs(writer, i, masks)
             utils.write_slots(writer, i, slots)
             if net.module.discretize:
-                utils.write_discrete(writer, i, discrete)
+                if parameters.discrete_per_slot:
+                    discrete = torch.reshape(discrete, (parameters.batch_size, parameters.slots, -1))
+                    utils.write_discrete(writer, i, discrete)
+                else:
+                    discrete_sample = discrete[0].cpu().detach().numpy()
+                    discrete_sample = np.concatenate([discrete_sample[::2], discrete_sample[1::2]])
+                    fig = plt.figure()
+                    axes = plt.axes()
+                    axes.imshow(discrete_sample.reshape((discrete_sample.shape[0] // 8, 8)), cmap="Greys")
+                    writer.add_figure(tag=f"Sample_0/Discrete", figure=fig, global_step=i)
                 writer.add_scalar("metric/zs_loss", losses["zs"].item(), global_step=i)
                 writer.add_scalar("metric/recon_loss", losses["recon"].item(), global_step=i)
 

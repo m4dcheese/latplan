@@ -38,7 +38,7 @@ parameters = dotdict({
     "random_orientation": False,
 
     # Discretization
-    "latent_size": 16,
+    "latent_size": 240,
     "p": 0.1,
     "beta": 0.05,
     "zero_supp_version": "paper",
@@ -51,6 +51,7 @@ parameters = dotdict({
     "encoder_channels": 16,
 
     # Slot Attention architecture
+    "discrete_per_slot": False,
     "slots": 10,
     "slot_iters": 4,
     "encoder_hidden_channels": 64,
