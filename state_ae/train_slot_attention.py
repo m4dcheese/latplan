@@ -21,8 +21,8 @@ from util import set_manual_seed
 torch.set_num_threads(30)
 
 def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=0):
-    net.train()
-    torch.set_grad_enabled(True)
+#    net.train()
+ #   torch.set_grad_enabled(True)
 
     iters_per_epoch = len(loader)
 

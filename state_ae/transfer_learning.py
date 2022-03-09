@@ -9,19 +9,19 @@ def transfer_learn():
     model = DiscreteSlotAttention_model(parameters.slots, parameters.slot_iters, 0)
 
     # Compatability for loading weights (differing shapes cause unresolvable error)
-    model.mlp_to_gs = torch.nn.Sequential(
-        torch.nn.Linear(parameters.encoder_hidden_channels, parameters.fc_width),
-        torch.nn.Tanh(),
-        torch.nn.Linear(parameters.fc_width, 2*8),
-    ).to("cuda")
+    model.mlp_to_gs = None #torch.nn.Sequential(
+#        torch.nn.Linear(parameters.encoder_hidden_channels, parameters.fc_width),
+ #       torch.nn.Tanh(),
+  #      torch.nn.Linear(parameters.fc_width, 2*8),
+   # ).to("cuda")
 
-    model.mlp_from_gs = torch.nn.Sequential(
-        torch.nn.Linear(2*8, parameters.fc_width),
-        torch.nn.Tanh(),
-        torch.nn.Linear(parameters.fc_width, parameters.encoder_hidden_channels)
-    ).to("cuda")
+    model.mlp_from_gs = None # torch.nn.Sequential(
+#        torch.nn.Linear(2*8, parameters.fc_width),
+ #       torch.nn.Tanh(),
+  #      torch.nn.Linear(parameters.fc_width, parameters.encoder_hidden_channels)
+   # ).to("cuda")
 
-    model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model, device_ids=parameters.device_ids)
 
     log = torch.load(parameters.resume)
     weights = log["weights"]
@@ -36,23 +36,29 @@ def transfer_learn():
     model.module.decoder_pos.train()
     model.module.decoder_cnn.train()
 
-    model.module.mlp_to_gs = torch.nn.Sequential(
-        torch.nn.Linear(parameters.encoder_hidden_channels, parameters.fc_width),
-        torch.nn.Tanh(),
-        torch.nn.Linear(parameters.fc_width, 2*parameters.latent_size),
-    ).to("cuda")
+    if parameters.discrete_per_slot:
+        raw_size = parameters.encoder_hidden_channels
+        discrete_size = int(parameters.latent_size * 2 / parameters.slots)
+    else:
+        raw_size = parameters.encoder_hidden_channels * parameters.slots
+        discrete_size = parameters.latent_size * 2
 
-    model.module.mlp_from_gs = torch.nn.Sequential(
-        torch.nn.Linear(2*parameters.latent_size, parameters.fc_width),
+    model.module.mlp_to_gs = torch.nn.Sequential(
+        torch.nn.Linear(raw_size, parameters.fc_width),
         torch.nn.Tanh(),
-        torch.nn.Linear(parameters.fc_width, parameters.encoder_hidden_channels)
-    ).to("cuda")
+        torch.nn.Linear(parameters.fc_width, discrete_size),
+    ).to(f"cuda:{parameters.device_ids[0]}")
+    model.module.mlp_from_gs = torch.nn.Sequential(
+        torch.nn.Linear(discrete_size, parameters.fc_width),
+        torch.nn.Tanh(),
+        torch.nn.Linear(parameters.fc_width, raw_size)
+    ).to(f"cuda:{parameters.device_ids[0]}")
 
     learnable_parameters = list(model.module.mlp_to_gs.parameters())
     learnable_parameters += list(model.module.gs.parameters())
     learnable_parameters += list(model.module.mlp_from_gs.parameters())
-    learnable_parameters += list(model.module.encoder_pos.parameters())
-    learnable_parameters += list(model.module.encoder_cnn.parameters())
+    learnable_parameters += list(model.module.decoder_pos.parameters())
+    learnable_parameters += list(model.module.decoder_cnn.parameters())
 
     for param in learnable_parameters:
         param.requires_grad = True

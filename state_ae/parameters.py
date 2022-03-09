@@ -9,16 +9,16 @@ class dotdict(dict):
 
 
 parameters = dotdict({
-    "resume": "/home/madcheese/logs/2022-02-14_13:41:47",
+    "resume": "logs/2022-02-23_22:20:02",
     # General
     "name": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
-    "epochs": 10,
-    "batch_size": 10,
+    "epochs": 500,
+    "batch_size": 100,
     "no_cuda": False,
     "image_size": (64, 64),
     "warm_up_steps": .2, # Float for percentage of epochs
-    "lr": 5e-4,
-    "device_ids": [0],
+    "lr": 4e-4,
+    "device_ids": [2,3],
     "deterministic": 1,
     "gaussian_noise": 0.01,
 
@@ -40,8 +40,8 @@ parameters = dotdict({
     # Discretization
     "latent_size": 100,
     "p": 0.1,
-    "beta": 0.05,
-    "zero_supp_version": "paper",
+    "beta": 0.06,
+    "zero_supp_version": "weighted_root",
     "loss_beta_plan": "increase",
     "loss_kwargs": {"fraction_increase_end": 1/3},
 

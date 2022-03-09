@@ -9,7 +9,7 @@ class GaussianNoise(nn.Module):
     def __init__(self, stddev = 0.1):
         super().__init__()
         self.stddev = stddev
-    
+
     def forward(self, x: torch.Tensor):
         return torch.clip(x + self.stddev**0.5 * torch.randn_like(x), 0, 1)
 
@@ -28,7 +28,7 @@ class GumbelSoftmax(nn.Module):
         super().__init__()
         self.device = device
         self.total_epochs = total_epochs
-    
+
     def forward(self, x, epoch, hard: bool = False, eps=1e-10):
         batch_size = x.shape[0]
         num_of_variable_pairs = int(x.shape[-1] / 2)
@@ -39,7 +39,7 @@ class GumbelSoftmax(nn.Module):
             output = F.one_hot(max_idx).float()
         else:
             tau = get_tau(epoch, total_epochs=self.total_epochs)
-            u = torch.rand(pairs.shape, device=self.device)
+            u = torch.rand(pairs.shape, device=x.device)
             gumbel = -torch.log(-torch.log(u + eps) + eps)
             logits = (pairs + gumbel) / tau
             output = F.softmax(logits, dim=-1)

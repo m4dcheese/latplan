@@ -67,7 +67,7 @@ def evaluate(
         # Effective bits ([1] 6.1)
         discrete_usage += discrete.sum(dim=0).cpu().detach()
         del discrete
-    
+
     return {
         "bit_variance": bit_variance,
         "discrete_usage": discrete_usage
@@ -75,7 +75,7 @@ def evaluate(
 
 def evaluate_sae(model: StateAE, samples: int = 100):
     return evaluate(model=model, samples=samples, adapt_discrete=lambda out: out["discrete"][:, ::2], batch_size=100)
-    
+
 
 def evaluate_dsa_combined(model: StateAE, samples: int = 100):
     def adapt_fn(out):
@@ -95,3 +95,4 @@ def evaluate_dsa_per_slot(model: StateAE, samples: int = 100):
         # write_discrete(writer, i, ordered_states)
         return discrete # torch.reshape(ordered_states, (ordered_states.shape[0], -1))
     return evaluate(model=model, samples=samples, adapt_discrete=adapt_fn)
+

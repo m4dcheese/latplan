@@ -46,11 +46,12 @@ def train():
         usecuda=usecuda
     )
 
-    device = torch.device("cuda") if usecuda else torch.device("cpu")
+    device = torch.device(f"cuda:{parameters.device_ids[0]}") if usecuda else torch.device("cpu")
     print("Using device", device)
 
     # Create model
     model = StateAE(device=device).to(device)
+    model = torch.nn.DataParallel(model, device_ids=parameters.device_ids)
     optimizer = torch.optim.Adam(model.parameters(), lr=parameters.lr, weight_decay=1e-5)
     num_steps = len(loader) * parameters.epochs - parameters.warm_up_steps
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps, eta_min=0.00005)
