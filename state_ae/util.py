@@ -55,3 +55,38 @@ def set_manual_seed(seed: int = 1):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.cuda.benchmark = True
+
+def hungarian_matching(attrs: torch.Tensor, preds_attrs: torch.Tensor, verbose=0):
+    """
+    Receives unordered predicted set and orders this to match the nearest GT set.
+    :param attrs:
+    :param preds_attrs:
+    :param verbose:
+    :return:
+    """
+    assert attrs.shape[1] == preds_attrs.shape[1]
+    assert attrs.shape == preds_attrs.shape
+    from scipy.optimize import linear_sum_assignment
+    matched_preds_attrs = preds_attrs.clone()
+    idx_mappings = []
+    for sample_id in range(attrs.shape[0]):
+        # using euclidean distance
+        cost_matrix = torch.cdist(attrs[sample_id], preds_attrs[sample_id]).detach().cpu()
+
+        idx_mapping = linear_sum_assignment(cost_matrix)
+        # convert to tuples of [(row_id, col_id)] of the cost matrix
+        idx_mapping = [(idx_mapping[0][i], idx_mapping[1][i]) for i in range(len(idx_mapping[0]))]
+        idx_mappings.append(idx_mapping)
+
+        for i, (row_id, col_id) in enumerate(idx_mapping):
+            matched_preds_attrs[sample_id, row_id, :] = preds_attrs[sample_id, col_id, :]
+        if verbose:
+            print('GT: {}'.format(attrs[sample_id]))
+            print('Pred: {}'.format(preds_attrs[sample_id]))
+            print('Cost Matrix: {}'.format(cost_matrix))
+            print('idx mapping: {}'.format(idx_mapping))
+            print('Matched Pred: {}'.format(matched_preds_attrs[sample_id]))
+            print('\n')
+            # exit()
+
+    return matched_preds_attrs, idx_mappings

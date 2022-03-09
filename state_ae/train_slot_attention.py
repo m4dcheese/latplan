@@ -6,7 +6,7 @@ from tqdm import tqdm
 import matplotlib
 import matplotlib.pyplot as plt
 from torch.optim import lr_scheduler
-from state_ae.activations import get_tau
+from state_ae.model import get_tau
 from state_ae.loss import total_loss
 matplotlib.use("Agg")
 from torch.utils.tensorboard import SummaryWriter

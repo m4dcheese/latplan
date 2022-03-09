@@ -12,7 +12,7 @@ from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
-from state_ae.activations import get_tau
+from state_ae.model import get_tau
 from state_ae.metrics import evaluate_sae
 from state_ae.util import save_images
 from state_ae.utils import save_args
@@ -89,14 +89,10 @@ def train():
                 save_images(out=out, writer=writer, global_step=i)
                 with torch.no_grad():
                     model.eval()
-                    metrics = evaluate_sae(model=model, usecuda=usecuda, samples=1000)
+                    metrics = evaluate_sae(model=model, samples=1000)
                     writer.add_scalar("metric/bit_variance", metrics["bit_variance"], global_step=i)
                     effective_bits = (metrics["discrete_usage"].cpu().detach().numpy() >= 1.).sum() / parameters.latent_size
                     writer.add_scalar("metric/effective_bits", effective_bits, global_step=i)
-                    fig = plt.figure()
-                    axes = plt.axes()
-                    axes.bar(np.arange(parameters.latent_size), metrics["discrete_usage"].cpu().detach().numpy())
-                    writer.add_figure(tag="Sample/discrete_usage", figure=fig, global_step=i)
                     model.train()
 
             cur_lr = optimizer.param_groups[0]["lr"]

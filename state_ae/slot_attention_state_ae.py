@@ -8,9 +8,9 @@ import torchvision.models as models
 import numpy as np
 from torchsummary import summary
 
-from state_ae.activations import GumbelSoftmax, get_tau
+from state_ae.model import GumbelSoftmax, get_tau
 from parameters import parameters
-from state_ae.layers import GaussianNoise
+from state_ae.model import GaussianNoise
 
 def build_grid(resolution):
     ranges = [np.linspace(0., 1., num=res) for res in resolution]

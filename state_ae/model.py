@@ -1,10 +1,51 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from activations import GumbelSoftmax
+import math
 from parameters import parameters
-from state_ae.layers import GaussianNoise
+
+
+class GaussianNoise(nn.Module):
+    def __init__(self, stddev = 0.1):
+        super().__init__()
+        self.stddev = stddev
+    
+    def forward(self, x: torch.Tensor):
+        return torch.clip(x + self.stddev**0.5 * torch.randn_like(x), 0, 1)
+
+
+def get_tau(epoch, t_max=5, t_min=0.1, total_epochs=1000):
+    iters_per_epoch = parameters.total_samples / parameters.batch_size
+    epoch_start_decrease = math.ceil(parameters.warm_up_steps / iters_per_epoch)
+    if epoch * iters_per_epoch < parameters.warm_up_steps:
+        return t_max
+    return t_max * (t_min / t_max) ** (min(epoch - epoch_start_decrease, (total_epochs - epoch_start_decrease)) / (total_epochs - epoch_start_decrease))
+
+
+class GumbelSoftmax(nn.Module):
+
+    def __init__(self, device, total_epochs):
+        super().__init__()
+        self.device = device
+        self.total_epochs = total_epochs
+    
+    def forward(self, x, epoch, hard: bool = False, eps=1e-10):
+        batch_size = x.shape[0]
+        num_of_variable_pairs = int(x.shape[-1] / 2)
+        pairs = torch.reshape(x, (batch_size, num_of_variable_pairs, 2))
+
+        if hard:
+            max_idx = torch.argmax(pairs, dim=-1)
+            output = F.one_hot(max_idx).float()
+        else:
+            tau = get_tau(epoch, total_epochs=self.total_epochs)
+            u = torch.rand(pairs.shape, device=self.device)
+            gumbel = -torch.log(-torch.log(u + eps) + eps)
+            logits = (pairs + gumbel) / tau
+            output = F.softmax(logits, dim=-1)
+
+        output = torch.reshape(output, x.shape)
+        return output
 
 
 class Encoder(nn.Module):
