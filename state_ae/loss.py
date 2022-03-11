@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from parameters import parameters
+parameters = {}
 
 '''
 All loss functions found here
@@ -104,8 +104,9 @@ def beta_scheduler(step, plan="paper", **kwargs) -> float:
 
 
 # Follows equations given in section 3.1.8 Loss Functions
-def total_loss(out, target, p, beta, step, writer):
-
+def total_loss(out, target, p, beta, step, writer, params):
+    global parameters
+    parameters = params
     # Reconstruction losses
     criterion = nn.MSELoss()
 
