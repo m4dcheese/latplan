@@ -145,8 +145,8 @@ def generate_shapes(
                 perm_row, perm_col = (permutation_value // size, permutation_value % size)
 
                 if random_distribution:
-                    top_offset = int(rng.uniform(low=0, high=(size - 1) * field_resolution))
-                    left_offset = int(rng.uniform(low=0, high=(size - 1) * field_resolution))
+                    top_offset = int(rng.uniform(low=int(- .5 * field_resolution), high=int((size - .5) * field_resolution)))
+                    left_offset = int(rng.uniform(low=int(- .5 * field_resolution), high=int((size - .5) * field_resolution)))
                 else:
                     top_offset = row * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
                     left_offset = col * field_resolution + int(rng.uniform(low=-field_random_offset, high=field_random_offset))
