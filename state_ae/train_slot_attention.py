@@ -21,8 +21,8 @@ from util import set_manual_seed
 torch.set_num_threads(30)
 
 def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=0):
-#    net.train()
- #   torch.set_grad_enabled(True)
+    net.train()
+    torch.set_grad_enabled(True)
 
     iters_per_epoch = len(loader)
 
@@ -36,7 +36,7 @@ def run(net, loader, optimizer, criterion, scheduler, writer, parameters, epoch=
                 "discrete": discrete,
                 "decoded": recon_combined
             }
-            loss, losses = total_loss(out, imgs[1], parameters.p, parameters.beta, step=i, writer=writer)
+            loss, losses = total_loss(out, imgs[1], parameters.p, parameters.beta, step=i, writer=writer, params=parameters)
         else:
             recon_combined, recons, masks, slots = net.forward(imgs[0], epoch)
 

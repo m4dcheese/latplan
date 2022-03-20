@@ -314,7 +314,7 @@ class DiscreteSlotAttention_model(nn.Module):
                                                  out_channels=self.in_channels + 1)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, img, epoch, discrete=None):
+    def forward(self, img, epoch=10000, discrete=None):
         img = self.gaussian_noise(img)
         # `x` has shape: [batch_size, width, height, num_channels].
         # SLOT ATTENTION ENCODER
@@ -340,7 +340,7 @@ class DiscreteSlotAttention_model(nn.Module):
             # logits has shape: [batch_size*num_slots, 2 * latent_size]
 
             if discrete is None:
-                discrete = self.gs(logits, epoch)
+                discrete = self.gs(logits, epoch, hard=not self.training)
 
             x = self.mlp_from_gs(discrete)
             # x has shape: [batch_size*num_slots, slot_size]
