@@ -9,7 +9,7 @@ import numpy as np
 from torchsummary import summary
 
 from state_ae.model import GumbelSoftmax, get_tau
-from parameters import parameters
+from state_ae.parameters import parameters
 from state_ae.model import GaussianNoise
 
 def build_grid(resolution):
@@ -297,12 +297,16 @@ class DiscreteSlotAttention_model(nn.Module):
 
         self.mlp_to_gs = torch.nn.Sequential(
             torch.nn.Linear(raw_size, parameters.fc_width),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(num_features=parameters.fc_width),
+            torch.nn.Dropout(p=.4),
             torch.nn.Linear(parameters.fc_width, discrete_size),
         )
         self.mlp_from_gs = torch.nn.Sequential(
             torch.nn.Linear(discrete_size, parameters.fc_width),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(num_features=parameters.fc_width),
+            torch.nn.Dropout(p=.4),
             torch.nn.Linear(parameters.fc_width, raw_size)
         )
 

@@ -13,12 +13,12 @@ parameters = dotdict({
     # General
     "name": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
     "epochs": 500,
-    "batch_size": 100,
+    "batch_size": 10,
     "no_cuda": False,
     "image_size": (64, 64),
     "warm_up_steps": .2, # Float for percentage of epochs
-    "lr": 4e-4,
-    "device_ids": [2,3],
+    "lr": 5e-4,
+    "device_ids": [0],
     "deterministic": 1,
     "gaussian_noise": 0.01,
 
@@ -32,13 +32,13 @@ parameters = dotdict({
     "field_resolution": 24,
     "field_padding": .2, # Float for percentage of field_resolution
     "random_distribution_prob": 0,
-    "color_table_size": 3,
+    "color_table_size": 9,
     "background": 64,
     "random_colors": False,
     "random_orientation": False,
 
     # Discretization
-    "latent_size": 100,
+    "latent_size": 360,
     "p": 0.1,
     "beta": 0.06,
     "zero_supp_version": "weighted_root",
@@ -52,8 +52,8 @@ parameters = dotdict({
 
     # Slot Attention architecture
     "discrete_per_slot": True,
-    "slots": 10,
-    "slot_iters": 4,
+    "slots": 15,
+    "slot_iters": 3,
     "encoder_hidden_channels": 64,
     "attention_hidden_channels": 128,
     "decoder_hidden_channels": 64

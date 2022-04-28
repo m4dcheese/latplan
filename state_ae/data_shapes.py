@@ -2,7 +2,7 @@ from typing import Union
 import cv2 as cv
 import numpy as np
 
-from parameters import parameters
+from state_ae.parameters import parameters
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)

@@ -4,11 +4,12 @@ import numpy as np
 from tensorflow.keras.datasets.mnist import load_data
 import torchvision.transforms as T
 
-from data_shapes import generate_shapes
+from state_ae.data_shapes import generate_shapes
 
 def generate_permutations(n: int, size: int, deletions: int, deleted_index: int) -> np.array:
     # Generate logical puzzle permutations
     permutations = np.array([np.random.permutation(np.arange(size)) for i in range(n)])
+    permutations = np.array([[0,3,5,4,2,8,7,6,1], [3,0,5,4,2,8,7,6,1], [3,2,5,4,0,8,7,6,1]])
 
     if deletions > 0:
         # Delete some digits

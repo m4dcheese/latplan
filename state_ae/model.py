@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from parameters import parameters
+from state_ae.parameters import parameters
 
 
 class GaussianNoise(nn.Module):
@@ -36,7 +36,7 @@ class GumbelSoftmax(nn.Module):
 
         if hard:
             max_idx = torch.argmax(pairs, dim=-1)
-            output = F.one_hot(max_idx).float()
+            output = F.one_hot(max_idx, num_classes=2).float()
         else:
             tau = get_tau(epoch, total_epochs=self.total_epochs)
             u = torch.rand(pairs.shape, device=x.device)
